@@ -127,9 +127,9 @@ class TestRepository {
     return { ...inv };
   }
 
-  async claimInvitation(tokenHash: string, userId: string, now: number) {
+  async claimInvitation(tokenHash: string, userId: string, now: number, email?: string) {
     const inv = this.db.invitations.get(tokenHash);
-    if (!inv || inv.claimed_by || inv.expires_at <= now) return null;
+    if (!inv || inv.claimed_by || inv.expires_at <= now || (email && inv.email !== email.toLowerCase())) return null;
     inv.claimed_by = userId;
     this.db.memberships.set(memberKey(inv.workspace_id, userId, inv.engagement_id), {
       userId,

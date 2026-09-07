@@ -54,120 +54,77 @@ async function getActor(request: Request) {
 // --- Repository (inline for edge function) ---
 class Repository {
   private client: ReturnType<typeof createClient>;
+  private actorId: string;
+  private actorEmail: string;
 
-  constructor(client: ReturnType<typeof createClient>) {
+  constructor(client: ReturnType<typeof createClient>, actorId: string, actorEmail = "") {
     this.client = client;
+    this.actorId = actorId;
+    this.actorEmail = actorEmail;
   }
 
   async state(id: string) {
-    const { data, error } = await this.client
-      .from("workspaces")
-      .select("state")
-      .eq("id", id)
-      .maybeSingle();
+    const { data, error } = await this.client.rpc("mandate_get_workspace_state", { p_actor_id: this.actorId, p_workspace_id: id });
     if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
     if (!data) throw { code: "NOT_FOUND", message: "Workspace unavailable.", status: 404 };
-    return data.state;
+    return data;
   }
 
   async members(id: string) {
-    const { data, error } = await this.client
-      .from("memberships")
-      .select("user_id, engagement_id, role")
-      .eq("workspace_id", id);
+    const { data, error } = await this.client.rpc("mandate_get_workspace_members", { p_actor_id: this.actorId, p_workspace_id: id });
     if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    return (data || []).map((r: any) => ({
-      userId: r.user_id, engagementId: r.engagement_id, role: r.role,
-    }));
+    return (data || []).map((r: any) => ({ userId: r.user_id, engagementId: r.engagement_id, role: r.role }));
   }
 
-  async forUser(userId: string) {
-    const { data, error } = await this.client
-      .from("memberships")
-      .select("workspace_id")
-      .eq("user_id", userId);
+  async forUser(_userId?: string) {
+    const { data, error } = await this.client.rpc("mandate_get_user_workspaces", { p_actor_id: this.actorId });
     if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    const seen = new Set<string>();
-    const results: { id: string }[] = [];
-    for (const r of data || []) {
-      const wid = r.workspace_id as string;
-      if (!seen.has(wid)) { seen.add(wid); results.push({ id: wid }); }
-    }
-    return results.slice(0, 20);
+    return (data || []).slice(0, 20).map((r: any) => ({ id: r.id }));
   }
 
   async create(state: any) {
-    const { error: wErr } = await this.client.from("workspaces").insert({
-      id: state.id, owner_id: state.ownerId, state, revision: 0,
-    });
-    if (wErr) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    const { error: mErr } = await this.client.from("memberships").insert({
-      workspace_id: state.id, user_id: state.ownerId,
-      engagement_id: "eng_alpha_sec", role: "preparer",
-    });
-    if (mErr) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
+    const { error } = await this.client.rpc("mandate_create_workspace", { p_actor_id: this.actorId, p_state: state });
+    if (error) {
+      if (error.code === "40901") throw { code: "WORKSPACE_EXISTS", message: "Your sandbox already exists. Refresh to open it.", status: 409 };
+      throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
+    }
   }
 
-  async save(state: any, expected: number) {
+  async save(state: any, expected: number, engagementId = "eng_alpha_sec", action = "change_package") {
     state.revision = expected + 1;
-    const { data, error } = await this.client
-      .from("workspaces")
-      .update({ state, revision: state.revision })
-      .eq("id", state.id).eq("revision", expected)
-      .select("id").maybeSingle();
-    if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    if (!data) throw { code: "STALE_VERSION", message: "Someone changed this workspace. Refresh and review the current version.", status: 409 };
+    const { error } = await this.client.rpc("mandate_save_workspace_state", { p_actor_id: this.actorId, p_state: state, p_expected_revision: expected, p_engagement_id: engagementId, p_action: action });
+    if (error) {
+      if (error.code === "40001") throw { code: "STALE_VERSION", message: "The workspace changed. Refresh before continuing.", status: 409 };
+      throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
+    }
   }
 
   async countInvitations(ws: string) {
-    const { count, error } = await this.client
-      .from("invitations").select("*", { count: "exact", head: true })
-      .eq("workspace_id", ws);
+    const { data, error } = await this.client.rpc("mandate_count_invitations", { p_actor_id: this.actorId, p_workspace_id: ws });
     if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    return count || 0;
+    return Number(data || 0);
   }
 
-  async createInvitation(tokenHash: string, ws: string, inviter: string, email: string, eng: string, exp: number) {
-    const { error } = await this.client.from("invitations").insert({
-      token_hash: tokenHash, workspace_id: ws, inviter_id: inviter,
-      email: email.toLowerCase(), engagement_id: eng, expires_at: exp,
-    });
+  async createInvitation(tokenHash: string, ws: string, _inviter: string, email: string, eng: string, exp: number) {
+    const { error } = await this.client.rpc("mandate_create_invitation", { p_actor_id: this.actorId, p_token_hash: tokenHash, p_workspace_id: ws, p_email: email.toLowerCase(), p_engagement_id: eng, p_expires_at: exp });
     if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
   }
 
-  async getInvitation(tokenHash: string) {
-    const { data, error } = await this.client
-      .from("invitations")
-      .select("workspace_id, inviter_id, email, engagement_id, expires_at, claimed_by")
-      .eq("token_hash", tokenHash).maybeSingle();
-    if (error) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    return data as any;
-  }
-
-  async claimInvitation(tokenHash: string, userId: string, now: number) {
-    const inv = await this.getInvitation(tokenHash);
-    if (!inv || inv.claimed_by || inv.expires_at <= now) return null;
-
-    const { error: mErr } = await this.client.from("memberships").insert({
-      workspace_id: inv.workspace_id, user_id: userId,
-      engagement_id: inv.engagement_id, role: "reviewer",
-    });
-    if (mErr && mErr.code !== "23505") throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-
-    const { data: updated, error: uErr } = await this.client
-      .from("invitations")
-      .update({ claimed_by: userId })
-      .eq("token_hash", tokenHash).eq("claimed_by", null)
-      .select("workspace_id, engagement_id").maybeSingle();
-    if (uErr) throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
-    if (!updated) return null;
-    return { workspace_id: updated.workspace_id, engagement_id: updated.engagement_id };
+  async claimInvitation(tokenHash: string, _userId?: string, _now?: number, _email?: string) {
+    const { data, error } = await this.client.rpc("mandate_claim_invitation", { p_token_hash: tokenHash, p_actor_id: this.actorId, p_actor_email: this.actorEmail });
+    if (error) {
+      if (error.code === "40301" || error.code === "40302") return null;
+      throw { code: "UNAVAILABLE", message: "Database error.", status: 503 };
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? { workspace_id: row.workspace_id, engagement_id: row.engagement_id } : null;
   }
 }
 
 // --- Domain logic (inline) ---
 const POLICY_VERSION = "mandate-sandbox-1";
 const SANDBOX_AGENT = "internal-sandbox-worker";
+const EDGE_BUILD = "mandate-api-v5";
 
 function membership(members: any[], actor: any, engagementId: string, roles?: string[]) {
   const m = members.find((m: any) => m.userId === actor.id && m.engagementId === engagementId);
@@ -448,8 +405,8 @@ Deno.serve(async (request: Request) => {
   try {
     const actor = await getActor(request);
     const serviceClient = createServiceClient();
-    const repo = new Repository(serviceClient);
-    const hashes = await computeHashes();
+    const repo = new Repository(serviceClient, actor?.id ?? "", actor?.email ?? "");
+    await computeHashes();
 
     const files = {
       get: async (key: string): Promise<Uint8Array | null> => {
@@ -546,7 +503,7 @@ Deno.serve(async (request: Request) => {
         }
       }
       const result = await applyCommand(s.state, s.actor, s.members, b.engagementId, b, now());
-      if (!result.replayed) await repo.save(result.state, s.state.revision);
+      if (!result.replayed) await repo.save(result.state, s.state.revision, b.engagementId, b.action);
       return corsResponse({ ...view(result.state, s.members, s.actor), blocked: result.blocked, replayed: result.replayed }, result.blocked?.status || 200);
     }
 
@@ -569,7 +526,7 @@ Deno.serve(async (request: Request) => {
       const row = await repo.getInvitation(await digest(b.token));
       if (!row || row.claimed_by || row.expires_at <= now() || row.email !== actor.email.toLowerCase() || row.inviter_id === actor.id)
         throw { code: "INVITE_INVALID", message: "This invitation is expired, used or intended for another reviewer.", status: 403 };
-      const claimed = await repo.claimInvitation(await digest(b.token), actor.id, now());
+      const claimed = await repo.claimInvitation(await digest(b.token));
       if (!claimed) throw { code: "INVITE_INVALID", message: "This invitation is expired, used or intended for another reviewer.", status: 403 };
       const s = await scoped(repo, actor, row.workspace_id);
       return corsResponse(view(s.state, s.members, s.actor));

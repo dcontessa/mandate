@@ -279,7 +279,8 @@ export async function handleApi(request: Request, ctx: Context) {
         b,
         ctx.now(),
       );
-      if (!result.replayed) await ctx.repo.save(result.state, s.state.revision);
+      if (!result.replayed)
+        await ctx.repo.save(result.state, s.state.revision, b.engagementId, b.action);
       return response(
         {
           ...view(result.state, s.members, s.actor),
@@ -333,23 +334,11 @@ export async function handleApi(request: Request, ctx: Context) {
           .strict()
           .parse(await body(request)),
         actor = actorOf(ctx);
-      const row = await ctx.repo.getInvitation(await digest(b.token));
-      if (
-        !row ||
-        row.claimed_by ||
-        row.expires_at <= ctx.now() ||
-        row.email !== actor.email.toLowerCase() ||
-        row.inviter_id === actor.id
-      )
-        throw new DomainError(
-          "INVITE_INVALID",
-          "This invitation is expired, used or intended for another reviewer.",
-          403,
-        );
       const claimed = await ctx.repo.claimInvitation(
         await digest(b.token),
         actor.id,
         ctx.now(),
+        actor.email,
       );
       if (!claimed)
         throw new DomainError(
@@ -357,7 +346,7 @@ export async function handleApi(request: Request, ctx: Context) {
           "This invitation is expired, used or intended for another reviewer.",
           403,
         );
-      const s = await scoped(ctx, row.workspace_id);
+      const s = await scoped(ctx, claimed.workspace_id);
       return response(view(s.state, s.members, s.actor));
     }
     if (request.method === "GET" && path === "evidence") {
