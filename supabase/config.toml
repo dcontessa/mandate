@@ -1,2 +1,5 @@
 [functions.mandate-api]
 verify_jwt = false
+
+[functions.terminal3-attest]
+verify_jwt = true

@@ -29,3 +29,15 @@ Before a real pilot: complete hosted adversarial/concurrency and two-person brow
 
 
 Account banning and session revocation above were performed and reported by Bolt. An independent login-rejection verification is still pending.
+
+### 2026-09-07: Terminal 3 trust manifest fix
+
+**Root cause identified and fixed.** The testnet trust manifest endpoint (`/api/trust-manifest`) does not include `rtmr1_allowlist`, which the SDK requires since v5.10+. The manifest returns `cluster`, `version`, `peer_ids`, `rtmr3_allowlist`, `signed_at`, `signature` — but omits `rtmr1_allowlist`. This caused `fetchTrustedManifest("testnet")` to throw "Trust manifest at ... is malformed."
+
+**Supported fix.** The RTMR1 value is published at the `/status` endpoint as `runtime_measurement_b64` (a 384-char base64 string containing 6 RTMR registers). Slot 3 (chars 192-256) contains the value the TDX quote reports as RTMR1. The adapter fetches both endpoints, patches the manifest with `rtmr1_allowlist` from `/status`, and builds a verified `TrustAnchor` via `manifestToTrustAnchor()`. This does NOT use `unsafe_trust_server`, does NOT invent RTMR values, and does NOT disable attestation.
+
+**Credential-free trust check passed.** The TEE cluster's attestation was verified without any API key. Handshake succeeded and a DID was returned (`did:t3n:c06e485716dc7a98ab965008e95012e7da458608`).
+
+**Server-only edge function deployed.** `terminal3-attest` (verify_jwt=true) returns cluster trust metadata to authenticated Mandate users. It preserves engagement isolation: it never exposes workspace or engagement data, and does not bypass Mandate's independent review/approval flow.
+
+**Next step.** A `T3N_API_KEY` secret (the private key of the ETH wallet registered with Terminal 3) must be configured as a Supabase edge function secret to enable full authentication and grant verification. The credential-free trust check works without it.
