@@ -124,7 +124,7 @@ class Repository {
 // --- Domain logic (inline) ---
 const POLICY_VERSION = "mandate-sandbox-1";
 const SANDBOX_AGENT = "internal-sandbox-worker";
-const EDGE_BUILD = "mandate-api-v5";
+const EDGE_BUILD = "mandate-api-v6";
 
 function membership(members: any[], actor: any, engagementId: string, roles?: string[]) {
   const m = members.find((m: any) => m.userId === actor.id && m.engagementId === engagementId);
