@@ -1,3 +1,7 @@
+# User update — 8 September 2026
+
+Use Bolt Database with its built-in authentication, private storage and server functions. Do not provision or connect Supabase. This explicit user decision supersedes all Supabase architecture/provisioning instructions below. Preserve all security and acceptance requirements while adapting provider-specific implementation to Bolt. Verify actual Bolt capabilities and report any unmet requirement; never substitute browser-only enforcement.
+
 # Mandate — Bolt migration brief
 
 Prepared 7 September 2026. This is a migration instruction, not a completed Bolt build.
