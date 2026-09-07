@@ -2,11 +2,25 @@
   "test": "Mandate hosted edge parity suite",
   "date": "2026-09-07",
   "provider": "Supabase PostgreSQL + Auth + Storage + Edge Functions",
-  "edge_build_live": "mandate-api-v10 (shared seed, verified-email getActor, strict CORS)",
-  "edge_build_pending_deploy": "mandate-api-v11 (shared imports from lib/, admin-provision endpoint, no secret check)",
+  "edge_build_live": "mandate-api-v12 (shared seed, admin-provision endpoint removed, no unauthenticated privileged endpoints)",
   "published_url": "https://dcontessa-mandate-im-1g30.bolt.host",
   "email_confirmation": "ON (required in getActor via email_confirmed_at check)",
   "terminal3": "disconnected",
+  "security_remediation": {
+    "admin_provision_endpoint": "REMOVED from source and deployed (v12). Anonymous POST /admin-provision returns 401 SIGN_IN_REQUIRED.",
+    "exposed_test_accounts": "Six synthetic test account passwords were committed to public source in tests/hosted-edge.mjs. All six accounts have been banned (banned_until=2030-12-31) and all sessions revoked via admin SQL. Passwords removed from source; test file now requires MANDATE_TEST_ACCOUNTS private env var. Old credentials treated as permanently exposed regardless of source removal due to Git history.",
+    "affected_accounts": [
+      "mandate-test-owner-1@example.test",
+      "mandate-test-owner-2@example.test",
+      "mandate-test-owner-3@example.test",
+      "mandate-test-reviewer-1@example.test",
+      "mandate-test-reviewer-2@example.test",
+      "mandate-test-reviewer-3@example.test"
+    ],
+    "account_status": "banned (banned_until=2030-12-31T00:00:00Z), sessions revoked",
+    "no_new_users_created": true,
+    "no_new_public_endpoints": true
+  },
   "results": {
     "status": "FAIL",
     "passed": 41,
@@ -30,14 +44,14 @@
     ],
     "failing_checks": [
       {
-        "name": "concurrent serializes",
-        "reason": "30s timeout on second owner's create endpoint (Storage upload latency). Not a logic failure.",
-        "fix": "Increase per-request timeout or pre-upload fixtures. The RPC serialization logic is correct (verified in local controls)."
+        "name": "concurrent release observed",
+        "reason": "Timeout on concurrent release calls. Timeout does NOT prove serialization is correct. This check is recorded as unverified, not passed.",
+        "fix": "Concurrent serialization logic is verified in local control suite only. Hosted concurrent release remains unverified due to request timeout."
       },
       {
         "name": "unauthorised signatory blocked",
-        "reason": "Live v10 function has old inline domain code with signatories ['A','B'] instead of ['person_a','person_b']. The signatory comparison passes incorrectly. The v11 code on disk fixes this by importing from shared lib/domain.ts, but v11 could not be deployed (deploy_edge_functions MCP tool hit per-run limit).",
-        "fix": "Deploy mandate-api-v11 from disk. It imports shared lib/domain.ts with correct person_a/person_b signatories and sourceChecks validation."
+        "reason": "Previously failed on v10 (old inline domain code). v12 deployed with shared lib/domain.ts imports. Live test against v12 confirmed: approve returns 409 with code SIGNATORIES_NOT_AUTHORISED. However, full hosted suite could not complete because test accounts are now banned (security remediation). Check passes in isolation but suite overall reports FAIL because accounts cannot sign in for remaining checks.",
+        "fix": "Provision new test accounts out-of-band via admin SQL with private credentials. Set MANDATE_TEST_ACCOUNTS env var. Rerun hosted suite."
       }
     ]
   },
@@ -56,15 +70,21 @@
     "direct_rpc_access": "denied (42501)",
     "rls": "enabled on all tables",
     "service_role_only_functions": "true",
-    "verified_email_required": "true (getActor checks email_confirmed_at)"
+    "verified_email_required": "true (getActor checks email_confirmed_at)",
+    "admin_provision_endpoint": "removed (v12)",
+    "no_unauthenticated_privileged_endpoints": true
   },
   "local_checks": {
     "typecheck": "PASS",
     "build": "PASS",
     "control_suite": "16/16 PASS"
   },
+  "concurrency_verification": {
+    "status": "unverified",
+    "note": "Timeout on hosted concurrent release calls does not prove serialization. Local control suite verifies serialization logic. Hosted verification requires longer timeout or pre-provisioned workspace."
+  },
   "pending": [
-    "Deploy mandate-api-v11 (shared imports, correct signatories, admin-provision without secret)",
-    "Rerun hosted suite after deploy to verify unauthorised signatory check"
+    "Provision new test accounts out-of-band with private credentials (old accounts banned, passwords exposed in Git history)",
+    "Set MANDATE_TEST_ACCOUNTS env var and rerun hosted suite"
   ]
 }

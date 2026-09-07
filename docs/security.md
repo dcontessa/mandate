@@ -39,3 +39,13 @@ Named responsibilities and access provisioning; independently verified identity 
 No general client upload endpoint is available. Sample PDFs are wholly invented and watermarked. Accounts/tax samples are not an AutoCount export or a statutory calculation. No bank, regulator, email or real payment system is contacted.
 
 If an integrity check or policy check fails, retain the error, refresh the workspace and resolve the source issue. Do not force an approval through the database. If storage returns an uncertain response, refresh and inspect the existing receipt before retrying. To revoke an exposed future provider key, use its issuer’s revocation process; no provider credential is configured in this build.
+
+## Incident log
+
+### 2026-09-07: Exposed test account credentials and unauthenticated admin-provision endpoint
+
+**Admin-provision endpoint removed.** A temporary POST /admin-provision endpoint existed in the edge function allowing unauthenticated user provisioning (protected only by obscurity and rate limiting). Absence of a user token is not authorization. The endpoint has been removed from source and the cleaned v12 function is deployed. Anonymous POST /admin-provision now returns 401 SIGN_IN_REQUIRED.
+
+**Test account passwords exposed in public source.** Six synthetic test account passwords were hard-coded in tests/hosted-edge.mjs and committed to the repository. All six accounts have been banned (banned_until=2030-12-31) and all sessions revoked via admin SQL. The passwords have been removed from the test file, which now requires a private MANDATE_TEST_ACCOUNTS environment variable. Old credentials are treated as permanently exposed regardless of source removal because Git history retains them. No new users were created and no public provisioning endpoints were added.
+
+**Concurrency evidence corrected.** The hosted-edge evidence file previously described a timeout on concurrent release calls as "not a logic failure." A timeout does not prove serialization is correct. The evidence has been corrected to "unverified." Local control suite verifies serialization logic; hosted concurrent release remains unverified.

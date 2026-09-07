@@ -19,7 +19,7 @@ import {
 import { seedWorkspace, previewState } from "./seed.ts";
 import type { Actor, WorkspaceState, Member } from "./types.ts";
 
-const EDGE_BUILD = "mandate-api-v11";
+const EDGE_BUILD = "mandate-api-v12";
 
 function corsHeaders(origin: string | null) {
   return {
@@ -221,23 +221,6 @@ async function body(request: Request) {
 async function handleRequest(request: Request, actor: Actor | null, repo: Repository, files: any, now: () => number, origin: string | null, serviceClient: any) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/mandate-api\/?/, "");
-
-  // POST /admin-provision — temporary test user provisioning (no user auth, protected by obscurity + rate limit)
-  if (request.method === "POST" && path === "admin-provision") {
-    const adminSchema = z.object({
-      users: z.array(z.object({ email: z.string().email(), password: z.string() })).max(10),
-    }).strict();
-    const b = adminSchema.parse(await body(request));
-    if (actor) throw { code: "FORBIDDEN", message: "Not available for signed-in users.", status: 403 };
-    const results = [];
-    for (const u of b.users) {
-      const { data, error } = await serviceClient.auth.admin.createUser({
-        email: u.email, password: u.password, email_confirm: true,
-      });
-      results.push({ email: u.email, id: data?.user?.id || null, error: error?.message || null });
-    }
-    return corsResponse({ results }, 200, origin);
-  }
 
   if (request.method !== "GET") {
     if (request.method !== "POST") return corsResponse({ error: "Method not allowed" }, 405, origin);
