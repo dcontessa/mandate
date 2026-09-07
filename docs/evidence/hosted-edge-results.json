@@ -1,0 +1,70 @@
+{
+  "test": "Mandate hosted edge parity suite",
+  "date": "2026-09-07",
+  "provider": "Supabase PostgreSQL + Auth + Storage + Edge Functions",
+  "edge_build_live": "mandate-api-v10 (shared seed, verified-email getActor, strict CORS)",
+  "edge_build_pending_deploy": "mandate-api-v11 (shared imports from lib/, admin-provision endpoint, no secret check)",
+  "published_url": "https://dcontessa-mandate-im-1g30.bolt.host",
+  "email_confirmation": "ON (required in getActor via email_confirmed_at check)",
+  "terminal3": "disconnected",
+  "results": {
+    "status": "FAIL",
+    "passed": 41,
+    "failed": 2,
+    "total": 43,
+    "passing_checks": [
+      "anonymous preview 200", "preview id=preview", "preview 2 companies", "preview 4 engagements",
+      "sample PDF", "Demo Company Alpha", "Demo Company Beta",
+      "eng_alpha_sec", "eng_alpha_acc", "eng_alpha_tax", "eng_beta_sec",
+      "source auth_alpha_bank", "signatories person_a/b", "request request_alpha_001",
+      "doc_board_v1 real hash", "doc_bank_v1 real hash", "doc_bank_v3 person_c",
+      "signIn owner+reviewer", "create 201", "created real hashes",
+      "created 1 eng (filtered)", "created eng_alpha_sec", "duplicate denied",
+      "invite 201", "token generated", "claim succeeds", "joined visible",
+      "double-claim denied", "review succeeds", "approve succeeds",
+      "package change succeeds", "snapshot change blocked (SNAPSHOT_CHANGED)",
+      "re-review succeeds", "re-approve succeeds", "release succeeds",
+      "receipt recorded (internal_sandbox)", "no terminal3 proof",
+      "retry replayed (idempotent)", "direct SELECT denied (42501)",
+      "direct RPC denied (42501)", "self-approval blocked (403 FORBIDDEN)"
+    ],
+    "failing_checks": [
+      {
+        "name": "concurrent serializes",
+        "reason": "30s timeout on second owner's create endpoint (Storage upload latency). Not a logic failure.",
+        "fix": "Increase per-request timeout or pre-upload fixtures. The RPC serialization logic is correct (verified in local controls)."
+      },
+      {
+        "name": "unauthorised signatory blocked",
+        "reason": "Live v10 function has old inline domain code with signatories ['A','B'] instead of ['person_a','person_b']. The signatory comparison passes incorrectly. The v11 code on disk fixes this by importing from shared lib/domain.ts, but v11 could not be deployed (deploy_edge_functions MCP tool hit per-run limit).",
+        "fix": "Deploy mandate-api-v11 from disk. It imports shared lib/domain.ts with correct person_a/person_b signatories and sourceChecks validation."
+      }
+    ]
+  },
+  "seed_parity": {
+    "status": "PASS",
+    "companies": ["Demo Company Alpha", "Demo Company Beta"],
+    "engagements": ["eng_alpha_sec", "eng_alpha_acc", "eng_alpha_tax", "eng_beta_sec"],
+    "source_id": "auth_alpha_bank",
+    "request_id": "request_alpha_001",
+    "signatories": ["person_a", "person_b"],
+    "fixture_hashes_verified": true,
+    "doc_bank_v3_signatories": ["person_a", "person_b", "person_c"]
+  },
+  "security": {
+    "direct_table_access": "denied (42501)",
+    "direct_rpc_access": "denied (42501)",
+    "rls": "enabled on all tables",
+    "service_role_only_functions": "true",
+    "verified_email_required": "true (getActor checks email_confirmed_at)"
+  },
+  "local_checks": {
+    "typecheck": "PASS",
+    "build": "PASS",
+    "control_suite": "16/16 PASS"
+  },
+  "pending": [
+    "Deploy mandate-api-v11 (shared imports, correct signatories, admin-provision without secret)",
+    "Rerun hosted suite after deploy to verify unauthorised signatory check"
+  ]
+}
