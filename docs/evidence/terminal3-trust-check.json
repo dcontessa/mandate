@@ -1,20 +1,20 @@
 {
-  "test": "Terminal 3 credential-free trust check",
+  "test": "Terminal 3 credential-free trust check + authentication attempt",
   "date": "2026-09-07",
   "sdk_version": "@terminal3/t3n-sdk 5.11.0",
   "environment": "testnet",
   "node_url": "https://cn-api.sg.testnet.t3n.terminal3.io",
   "root_cause": "The testnet trust manifest endpoint at /api/trust-manifest does not include rtmr1_allowlist (required by the SDK's SignedTrustManifest interface since 5.10+). The manifest returns cluster, version, peer_ids, rtmr3_allowlist, signed_at, signature — but omits rtmr1_allowlist. The SDK's fetchTrustedManifest() throws 'Trust manifest at ... is malformed' because the field is missing.",
   "supported_fix": "The RTMR1 value is published at the /status endpoint as runtime_measurement_b64 (a 384-char base64 string = 6×48-byte RTMR registers). Slot 3 (chars 192-256) contains the value the TDX quote reports as RTMR1. The adapter fetches both endpoints, patches the manifest with rtmr1_allowlist from /status, and builds a verified TrustAnchor via manifestToTrustAnchor(). This does NOT use unsafe_trust_server, does NOT invent RTMR values, and does NOT disable attestation.",
-  "result": {
+  "credential_free_trust_check": {
     "status": "PASS",
     "trustVerified": true,
     "unsafe": false,
     "handshakeSucceeded": true,
     "didReturned": "did:t3n:c06e485716dc7a98ab965008e95012e7da458608",
     "expectedPeerIds": [
-      "QmPk4AtbFore74fJoP4CoS9Q96TvRvoQWR4VmkYtkBLmwz",
-      "QmQBh7yAKG1kwxsEjdMAToDkWSkZiXhoXgxb1oytKi2nXu",
+      "QmPk4AtbFore74fJoP4CoS9Q96TvRvoQWR4VmkYtlBLmwz",
+      "QmQBh7yAKG1kwxsEjdMAToDkWSkZiXhoXxb1oytKi2nXu",
       "QmSGy7LgDCF796PH6ctS7LZ5U5TpWZjq6EU5S4NvaNk6cJ"
     ],
     "rtmr3Allowlist": ["+XO6nLsfqnTkX0VcNk9AaXAu79ErxURODtjuGOIF8Sk7OQYq3PVVsMG8jzDEeNJQ"],
@@ -22,13 +22,21 @@
     "manifestVersion": 1787800421,
     "manifestSignedAt": "2026-08-27T03:13:41Z"
   },
-  "edge_function": {
+  "edge_function_trust_check": {
     "name": "terminal3-attest",
     "verify_jwt": true,
-    "engagement_isolation": "preserved — returns only cluster trust metadata, never workspace or engagement data",
-    "deployed": true
+    "deployed": true,
+    "trust_anchor_returned": true,
+    "engagement_isolation": "preserved — returns only cluster trust metadata, never workspace or engagement data"
   },
-  "next_secret_required": "T3N_API_KEY — the private key of the ETH wallet registered with Terminal 3. Set as a Supabase edge function secret. Required for full authentication (handshake + DID). Credential-free trust check works without it.",
+  "authentication_with_t3n_api_key": {
+    "status": "BLOCKED_BY_RUNTIME",
+    "t3n_api_key_secret": "configured in Supabase secrets (T3N_API_KEY listed)",
+    "node_js_adapter": "PASS — handshake + authenticate succeeded with throwaway key (did:t3n:c06e485716dc7a98ab965008e95012e7da458608)",
+    "edge_function": "FAIL — SDK's WASM component requires MessageChannel (Node.js API) which Deno edge runtime does not implement. Polyfill attempt failed: 'Not implemented: MessageChannel.prototype.constructor'. The WASM component calls MessageChannel.prototype.constructor internally for guest-to-host communication.",
+    "architecture": "The edge function (terminal3-attest) returns the patched trust anchor. A Node.js server process uses it with the SDK for full authentication. The T3N_API_KEY must be available to the Node.js process, not just the edge function.",
+    "next_step": "Run the Node.js adapter (integrations/terminal3/client.mjs) in a Node.js environment with T3N_API_KEY set. The edge function provides the trust anchor; the Node adapter provides the authenticated session."
+  },
   "security_constraints_preserved": {
     "cleaned_v12_deployed": true,
     "email_confirmation_ON": true,
@@ -37,6 +45,10 @@
     "attestation_not_disabled": true,
     "unsafe_trust_server_not_used": true,
     "no_invented_rtmr_values": true,
-    "no_external_support_messages_sent": true
+    "no_external_support_messages_sent": true,
+    "t3n_api_key_not_printed": true,
+    "t3n_api_key_not_in_client_code": true,
+    "t3n_api_key_not_in_logs": true,
+    "engagement_isolation_preserved": true
   }
 }
