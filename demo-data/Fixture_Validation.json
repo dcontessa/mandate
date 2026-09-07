@@ -1,0 +1,18 @@
+{
+  "fixture_validation": "passed",
+  "validated": [
+    "unique identifiers",
+    "company/tenant/engagement references",
+    "six PDF file hashes",
+    "PDF demo labels",
+    "approval source references",
+    "different package hashes",
+    "reserved example email domains",
+    "empty runtime proof and receipt arrays",
+    "illustrative accounting arithmetic",
+    "seven-page preview"
+  ],
+  "app_acceptance_tests_executed": false,
+  "terminal3_calls_made": false,
+  "deliveries_made": 0
+}

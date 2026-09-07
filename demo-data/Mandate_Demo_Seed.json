@@ -1,0 +1,483 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "product": "Mandate",
+    "synthetic": true,
+    "purpose": "Hackathon development fixtures; not production records",
+    "scenario_date": "2026-09-07",
+    "timezone": "Asia/Kuala_Lumpur",
+    "contains_client_data": false,
+    "fixture_only": true,
+    "source": "Wholly invented, not anonymised or derived from Macro client records"
+  },
+  "tenants": [
+    {
+      "id": "tenant_demo_one",
+      "name": "Demo Practice One"
+    },
+    {
+      "id": "tenant_demo_two",
+      "name": "Demo Practice Two"
+    }
+  ],
+  "companies": [
+    {
+      "id": "co_demo_alpha",
+      "tenant_id": "tenant_demo_one",
+      "name": "Demo Company Alpha",
+      "registration_number": null,
+      "purpose": "Primary secretarial workflow plus separate accounting and tax fixtures"
+    },
+    {
+      "id": "co_demo_beta",
+      "tenant_id": "tenant_demo_one",
+      "name": "Demo Company Beta",
+      "registration_number": null,
+      "purpose": "Same-firm cross-client access boundary"
+    },
+    {
+      "id": "co_demo_gamma",
+      "tenant_id": "tenant_demo_two",
+      "name": "Demo Company Gamma",
+      "registration_number": null,
+      "purpose": "Cross-tenant access boundary"
+    }
+  ],
+  "actors": [
+    {
+      "id": "staff_preparer",
+      "display_name": "Alex Preparer (Demo)",
+      "email": "alex@practice-one.example",
+      "kind": "staff"
+    },
+    {
+      "id": "staff_reviewer",
+      "display_name": "Riley Reviewer (Demo)",
+      "email": "riley@practice-one.example",
+      "kind": "staff"
+    },
+    {
+      "id": "staff_accountant",
+      "display_name": "Sam Accountant (Demo)",
+      "email": "sam@practice-one.example",
+      "kind": "staff"
+    },
+    {
+      "id": "staff_tax",
+      "display_name": "Taylor Tax Reviewer (Demo)",
+      "email": "taylor@practice-one.example",
+      "kind": "staff"
+    },
+    {
+      "id": "person_a",
+      "display_name": "Person A (Demo)",
+      "email": "person-a@company-alpha.example",
+      "kind": "client_person"
+    },
+    {
+      "id": "person_b",
+      "display_name": "Person B (Demo)",
+      "email": "person-b@company-alpha.example",
+      "kind": "client_person"
+    },
+    {
+      "id": "person_c",
+      "display_name": "Person C (Demo)",
+      "email": "person-c@company-alpha.example",
+      "kind": "client_person"
+    },
+    {
+      "id": "staff_other_firm",
+      "display_name": "Morgan Other Practice (Demo)",
+      "email": "morgan@practice-two.example",
+      "kind": "staff"
+    },
+    {
+      "id": "agent_release",
+      "display_name": "Release Agent (Demo)",
+      "email": null,
+      "kind": "agent",
+      "terminal3_did": null
+    }
+  ],
+  "engagements": [
+    {
+      "id": "eng_alpha_sec",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "service": "secretarial",
+      "state": "awaiting_review"
+    },
+    {
+      "id": "eng_alpha_acc",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "service": "accounting",
+      "state": "awaiting_review"
+    },
+    {
+      "id": "eng_alpha_tax",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "service": "taxation",
+      "state": "awaiting_documents"
+    },
+    {
+      "id": "eng_beta_sec",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_beta",
+      "service": "secretarial",
+      "state": "not_started"
+    },
+    {
+      "id": "eng_gamma_sec",
+      "tenant_id": "tenant_demo_two",
+      "company_id": "co_demo_gamma",
+      "service": "secretarial",
+      "state": "not_started"
+    }
+  ],
+  "memberships": [
+    {
+      "actor_id": "staff_preparer",
+      "engagement_id": "eng_alpha_sec",
+      "role": "preparer"
+    },
+    {
+      "actor_id": "staff_reviewer",
+      "engagement_id": "eng_alpha_sec",
+      "role": "reviewer"
+    },
+    {
+      "actor_id": "staff_accountant",
+      "engagement_id": "eng_alpha_acc",
+      "role": "reviewer"
+    },
+    {
+      "actor_id": "staff_tax",
+      "engagement_id": "eng_alpha_tax",
+      "role": "reviewer"
+    },
+    {
+      "actor_id": "person_a",
+      "engagement_id": "eng_alpha_sec",
+      "role": "client_representative"
+    },
+    {
+      "actor_id": "person_b",
+      "engagement_id": "eng_alpha_sec",
+      "role": "client_representative"
+    },
+    {
+      "actor_id": "agent_release",
+      "engagement_id": "eng_alpha_sec",
+      "role": "release_agent"
+    },
+    {
+      "actor_id": "staff_other_firm",
+      "engagement_id": "eng_gamma_sec",
+      "role": "reviewer"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc_board_v1",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "kind": "source_authority_fixture",
+      "version": 1,
+      "path": "documents/01_Approved_Board_Record.pdf",
+      "sha256": "4bb3b7aba9177209047930b7b39cd170bf3e6efe0e76fcc40b5e584e9de0dabd",
+      "synthetic": true,
+      "signatory_ids": [
+        "person_a",
+        "person_b"
+      ]
+    },
+    {
+      "id": "doc_bank_v1",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "kind": "release_package",
+      "version": 1,
+      "path": "documents/02_Banking_Package_v1.pdf",
+      "sha256": "028b8fff16689739a0158c606152f51e88fcdf76ba981d106878d4f7ac20cf20",
+      "synthetic": true,
+      "signatory_ids": [
+        "person_a",
+        "person_b"
+      ]
+    },
+    {
+      "id": "doc_bank_v2",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "kind": "release_package",
+      "version": 2,
+      "path": "documents/03_Banking_Package_v2_Changed.pdf",
+      "sha256": "9095aff7c1ed661fcfdd7df7b534b365e53fc8f22425a776956d3052f1aae27c",
+      "synthetic": true,
+      "signatory_ids": [
+        "person_a",
+        "person_b"
+      ]
+    },
+    {
+      "id": "doc_bank_v3",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "kind": "release_package",
+      "version": 3,
+      "path": "documents/04_Banking_Package_v3_Unauthorised.pdf",
+      "sha256": "297fb0787e2fecefc6c280bd06efe2f0605deebe89c4ff67e6773ffb26f91864",
+      "synthetic": true,
+      "signatory_ids": [
+        "person_a",
+        "person_b",
+        "person_c"
+      ]
+    },
+    {
+      "id": "doc_accounts_v1",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_acc",
+      "kind": "management_summary_fixture",
+      "version": 1,
+      "path": "documents/05_Illustrative_Management_Summary.pdf",
+      "sha256": "0c8b6e6cc0bcb1f17269b1b8d5a8ff391e99452b574bd3b0c81ace148a47965e",
+      "synthetic": true,
+      "signatory_ids": []
+    },
+    {
+      "id": "doc_tax_v1",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_tax",
+      "kind": "document_checklist_fixture",
+      "version": 1,
+      "path": "documents/06_Tax_Document_Checklist.pdf",
+      "sha256": "b8946a8ce347aadf8c1f7d0906d729cfcd2db647b01c912a17b7e8d568c8b05f",
+      "synthetic": true,
+      "signatory_ids": []
+    }
+  ],
+  "source_authorities": [
+    {
+      "id": "auth_alpha_bank",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "source_document_id": "doc_board_v1",
+      "source_sha256": "4bb3b7aba9177209047930b7b39cd170bf3e6efe0e76fcc40b5e584e9de0dabd",
+      "allowed_signatory_ids": [
+        "person_a",
+        "person_b"
+      ],
+      "signatory_mode": "exact_set_jointly",
+      "status": "synthetic_reviewed_source_fixture",
+      "validity": {
+        "mode": "test_setup_relative",
+        "valid_from_minutes_after_reset": -5,
+        "expires_minutes_after_reset": 60
+      },
+      "legal_validity_asserted": false
+    }
+  ],
+  "destinations": [
+    {
+      "id": "sandbox_primary",
+      "label": "Sandbox receiver - primary",
+      "configured_url": null
+    },
+    {
+      "id": "sandbox_alternate",
+      "label": "Sandbox receiver - alternate",
+      "configured_url": null
+    }
+  ],
+  "release_requests": [
+    {
+      "id": "request_alpha_001",
+      "tenant_id": "tenant_demo_one",
+      "company_id": "co_demo_alpha",
+      "engagement_id": "eng_alpha_sec",
+      "created_by_actor_id": "staff_preparer",
+      "executing_agent_id": "agent_release",
+      "source_authority_id": "auth_alpha_bank",
+      "source_document_sha256": "4bb3b7aba9177209047930b7b39cd170bf3e6efe0e76fcc40b5e584e9de0dabd",
+      "document_id": "doc_bank_v1",
+      "document_version": 1,
+      "document_sha256": "028b8fff16689739a0158c606152f51e88fcdf76ba981d106878d4f7ac20cf20",
+      "requested_signatory_ids": [
+        "person_a",
+        "person_b"
+      ],
+      "action": "release_to_sandbox",
+      "destination_id": "sandbox_primary",
+      "state": "awaiting_human_approval",
+      "idempotency_key": "demo-release-alpha-001"
+    }
+  ],
+  "human_release_approvals": [],
+  "runtime_events": [],
+  "terminal3_proofs": [],
+  "delivery_receipts": [],
+  "accounting_fixture": {
+    "company_id": "co_demo_alpha",
+    "engagement_id": "eng_alpha_acc",
+    "currency": "MYR",
+    "not_an_autocount_export": true,
+    "months": [
+      {
+        "month": "2026-06",
+        "revenue": 80000,
+        "direct_costs": 48000,
+        "operating_expenses": 22000,
+        "gross_profit": 32000,
+        "illustrative_operating_profit": 10000
+      },
+      {
+        "month": "2026-07",
+        "revenue": 92000,
+        "direct_costs": 55200,
+        "operating_expenses": 23800,
+        "gross_profit": 36800,
+        "illustrative_operating_profit": 13000
+      },
+      {
+        "month": "2026-08",
+        "revenue": 105000,
+        "direct_costs": 63000,
+        "operating_expenses": 26000,
+        "gross_profit": 42000,
+        "illustrative_operating_profit": 16000
+      }
+    ]
+  },
+  "tax_checklist_fixture": {
+    "company_id": "co_demo_alpha",
+    "engagement_id": "eng_alpha_tax",
+    "not_a_statutory_checklist": true,
+    "items": [
+      {
+        "item": "Year-end trial balance",
+        "status": "Missing",
+        "owner": "Client finance contact (Demo)"
+      },
+      {
+        "item": "Fixed asset schedule",
+        "status": "Requested",
+        "owner": "Client finance contact (Demo)"
+      },
+      {
+        "item": "Prior-period working papers",
+        "status": "Pending staff review",
+        "owner": "Tax preparer (Demo)"
+      },
+      {
+        "item": "Client approval of completed pack",
+        "status": "Not started",
+        "owner": "Client representative (Demo)"
+      }
+    ]
+  },
+  "runtime_setup_required": {
+    "seed_allowed_only_in_isolated_demo_environment": true,
+    "real_terminal3_did_required_for_live_proof": true,
+    "terminal3_credentials_in_fixture": false,
+    "receiver_must_be_configured_server_side": true,
+    "fail_closed_if_setup_missing": true,
+    "public_role_switcher_is_not_authentication": true,
+    "demo_reset_route_publicly_available": false
+  },
+  "approval_binding_fields": [
+    "tenant_id",
+    "company_id",
+    "engagement_id",
+    "source_authority_id",
+    "source_document_sha256",
+    "document_id",
+    "document_version",
+    "document_sha256",
+    "requested_signatory_ids",
+    "action",
+    "destination_id",
+    "executing_agent_id",
+    "runtime_agent_did",
+    "policy_version",
+    "expires_at"
+  ],
+  "acceptance_scenarios": {
+    "results_are_expectations_not_executed_tests": true,
+    "independent_reset_before_each_scenario": true,
+    "cases": [
+      {
+        "id": "S01",
+        "title": "Authorised release",
+        "change": "Keep the source and package v1 unchanged. Reviewer approves the exact snapshot; configure a real T3 identity, matching grant and sandbox receiver.",
+        "expected": "One sandbox delivery and a genuine runtime receipt.",
+        "expected_delivery_count": 1
+      },
+      {
+        "id": "S02",
+        "title": "Unapproved signatory",
+        "change": "Use package v3 and request A+B+C. A release approval cannot override the source record restriction.",
+        "expected": "Block: signatory C is not authorised by the source fixture.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S03",
+        "title": "Document changed after approval",
+        "change": "Approve package v1, then substitute package v2. Signatories stay A+B but file bytes and version change.",
+        "expected": "Block: approval snapshot mismatch; require new review.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S04",
+        "title": "Recipient changed after approval",
+        "change": "Approve sandbox_primary, then request sandbox_alternate with all other inputs unchanged.",
+        "expected": "Block: recipient no longer matches approval.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S05",
+        "title": "Cross-client / cross-service / cross-tenant access",
+        "change": "As staff_preparer, call protected APIs directly for eng_beta_sec, eng_alpha_acc and eng_gamma_sec in three separate tests.",
+        "expected": "Deny all three; no document bytes or sensitive record metadata disclosed.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S06",
+        "title": "Expired authority",
+        "change": "Approve a valid snapshot, then advance only the test clock beyond source-authority expiry; keep release approval otherwise current.",
+        "expected": "Block at final execution because source authority has expired.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S07",
+        "title": "No matching Terminal 3 outbound grant",
+        "change": "Satisfy business checks and human approval, but withhold the required outbound grant in the real T3 test environment.",
+        "expected": "No delivery. Capture the actual T3 denial; never seed a fake proof or hardcode a successful SDK response.",
+        "expected_delivery_count": 0
+      },
+      {
+        "id": "S08",
+        "title": "Retry after delivery timeout",
+        "change": "Receiver accepts S01 but worker times out before recording success. Retry with the same idempotency key and receiver-side deduplication.",
+        "expected": "Exactly one receiver-side delivery in total; reconcile the existing receipt. App-only deduplication is insufficient.",
+        "expected_delivery_count": 1
+      },
+      {
+        "id": "S09",
+        "title": "Missing human approval / self-approval",
+        "change": "Try release with empty approvals, then try to approve as the preparer or executing agent.",
+        "expected": "Deny release and self-approval; an authorised independent reviewer is required.",
+        "expected_delivery_count": 0
+      }
+    ]
+  }
+}

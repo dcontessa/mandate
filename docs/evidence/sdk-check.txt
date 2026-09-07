@@ -1,0 +1,5 @@
+Terminal 3 SDK 5.11.0, plain Node 24.19.0, 7 September 2026.
+PASS: expected SDK exports import as functions.
+NOT RUN: live authentication. T3N_API_KEY unavailable; smoke script exited 2.
+NOT RUN: separate agent provisioning, outbound grant, TEE contract, external receiver.
+No DID, grant or provider receipt is recorded.

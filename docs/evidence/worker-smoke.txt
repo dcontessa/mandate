@@ -1,0 +1,5 @@
+Observed 7 September 2026 in local Miniflare/workerd (compatibility date 2026-05-22).
+PASS: compiled production Worker renders Mandate, bank signatory workflow and synthetic-data disclosure.
+PASS: compiled production Worker ignores supplied identity headers when MANDATE_AUTH_MODE is unset.
+2 tests passed, 0 failed.
+Scope: local compiled Worker runtime. Not a live deployment or hosted sign-in test.

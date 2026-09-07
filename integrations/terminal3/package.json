@@ -1,0 +1,1 @@
+{"name":"mandate-terminal3-node-adapter","version":"0.1.0","private":true,"type":"module","scripts":{"check":"node smoke.mjs","inspect":"node inspect-sdk.mjs"},"dependencies":{"@terminal3/t3n-sdk":"5.11.0"}}

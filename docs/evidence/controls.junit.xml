@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+	<testcase name="actual SQLite workflow: independent review produces one internal sandbox receipt, with no provider proof" time="0.028606" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="package v3 adds C: professional approval cannot override the source signatory constraint" time="0.012246" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="package v2 keeps A+B but invalidates v1 approval" time="0.020436" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="recipient substitution is rejected at the final record boundary" time="0.009569" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="three direct API boundaries: other company, service and tenant deny documents and commands" time="0.012501" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="source expiry is evaluated using server time at execution" time="0.008508" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="Terminal 3 mode fails closed even when business checks and snapshot approval pass" time="0.010885" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="retry after a lost response returns the existing internal receipt, not a second effect" time="0.008901" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="missing approval, preparer self-approval and agent self-approval denied" time="0.008271" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="revoked reviewer cannot carry approval into a later execution" time="0.007717" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="stored file bytes are verified before approval and release" time="0.007416" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="unauthenticated writes, CSRF origins, malformed input and unknown fields rejected" time="0.005383" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="reviewer invitations are single-use, email-bound and reject self-invites" time="0.005673" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="compare-and-swap stops two approved snapshot writes from winning the same revision" time="0.007048" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="anonymous fixture preview has no runtime evidence and only public synthetic PDFs" time="0.010688" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<testcase name="approval expiry and changed policy are blocked even when the source is current" time="0.010585" classname="test" file="/workspace/sites/mandate/tests/mandate.test.ts"/>
+	<!-- tests 16 -->
+	<!-- suites 0 -->
+	<!-- pass 16 -->
+	<!-- fail 0 -->
+	<!-- cancelled 0 -->
+	<!-- skipped 0 -->
+	<!-- todo 0 -->
+	<!-- duration_ms 347.153406 -->
+</testsuites>
