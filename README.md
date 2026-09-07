@@ -4,7 +4,13 @@
 
 Mandate helps professional practices review the right client document, bind approval to its exact version, and stop an action when its authority or scope changes. It sits alongside AutoCount, Excel and existing practice systems.
 
-**Current status: working prototype.** The application builds, its 16 control tests pass, and the backend runs on Supabase (PostgreSQL, Auth, Storage, Edge Functions). Terminal 3 live execution remains intentionally disconnected. No live URL or video is claimed.
+**Current status: published synthetic prototype, hosted verification incomplete.**
+
+- [Live demo](https://dcontessa-mandate-im-1g30.bolt.host/)
+- [2:17 YouTube walkthrough](https://youtu.be/N65O1tgPg7Q) with ElevenLabs narration
+- [Verification and known limitations](docs/evidence.md)
+
+The backend uses **Bolt's managed database, authentication, private storage and server functions**. No separate Supabase project was provisioned; the underlying SDK and deployment directory retain that name. Terminal 3 is explicitly disconnected. The submission form is a draft, not a submitted entry.
 
 ![Mandate workspace](docs/preview.jpg)
 
@@ -30,19 +36,19 @@ Mandate binds that approval to the complete action snapshot and checks it again 
 | Workspace | Client register, scoped work queue, service filters, version comparison, actual synthetic PDFs | Real client pilot and user feedback |
 | Authority and approval | Source review, different reviewer identity, exact SHA-256 binding, expiry and changed-snapshot rejection | Two-person hosted browser validation |
 | Isolation | Server membership checks on documents, commands, views and exports | Hosted gateway/isolation verification |
-| Persistence | Supabase PostgreSQL aggregate/membership model with RLS; Supabase Storage for private PDFs | Backup and restore verification |
+| Persistence | Bolt-managed PostgreSQL aggregate/membership model and private storage | Backup and restore verification |
 | Internal sandbox | Atomic receipt and activity save; duplicate request returns existing receipt | External receiver and distributed reconciliation |
-| Terminal 3 | SDK 5.11.0 imports successfully; separate Node authentication adapter; application fails closed | Keys, live authentication, agent identity/credits, outbound grant, TEE contract and real receiver |
+| Terminal 3 | SDK 5.11.0 imports successfully; separate Node authentication adapter; application fails closed | Trust-manifest compatibility, live authentication, agent identity/credits, outbound grant, TEE contract and real receiver |
 | Accounting and tax | Synthetic reference documents and access boundaries | Complete service workflows; no AutoCount API integration |
-| Auth | Supabase email/password sign-up, sign-in, sign-out; anonymous read-only preview | Email confirmation stays OFF for prototype |
-| Demo and docs | Reproducible source, fixture pack, 16 control tests, recording plan | Public live URL and video |
+| Auth | Bolt-managed email/password sign-up, sign-in, sign-out; anonymous read-only preview | Email confirmation ON; distinct accounts do not prove distinct people |
+| Demo and docs | Reproducible source, fixture pack, 16 control tests, recording plan | Hosted concurrency and practitioner verification |
 
 ## Stack
 
 - **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS v4
-- **Backend:** Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **Backend:** Bolt-managed PostgreSQL, Auth, Storage and server functions
 - **Database:** PostgreSQL with row-level security (RLS) on all tables
-- **Storage:** Private Supabase Storage bucket for synthetic PDF fixtures
+- **Storage:** Private Bolt-managed storage bucket for synthetic PDF fixtures
 - **Edge Function:** Deno-based `mandate-api` function handling all protected operations
 
 ## Sixty-second exploration
@@ -54,7 +60,7 @@ Mandate binds that approval to the complete action snapshot and checks it again 
 5. Open **Release** for exact recipient, mode, approval and expiry.
 6. Open **Activity & evidence**. It starts empty; actual actions populate it.
 
-Anonymous local preview is read-only. After sign-in, a preparer creates an isolated synthetic workspace and invites a separate reviewer. See the complete two-person flow in [demo.md](docs/demo.md).
+Anonymous public preview is read-only. After sign-in, a preparer creates an isolated synthetic workspace and invites a separate reviewer. See the complete two-person flow in [demo.md](docs/demo.md).
 
 ## Reproduce
 
@@ -79,6 +85,9 @@ All companies, people, figures and documents are wholly invented. No real Macro 
 ## Limitations
 
 - Terminal 3 live execution is intentionally disconnected. Internal sandbox receipts are not Terminal 3 proofs or external delivery confirmations.
-- Email confirmation is OFF for the prototype. Anyone can create an account with a valid email and password.
+- Email confirmation is ON. New users must confirm their mailbox before signing in.
 - No emails are sent for invitations. The preparer shares the invitation link manually.
 - The edge function uses the service role key for privileged operations (membership creation, invitation claiming). Ordinary clients cannot write to memberships or invitations directly — RLS denies all writes except through the service role.
+
+- Hosted concurrent-release tests have timed out; serialization has not been established by those timeouts.
+- The historical Build 01 Worker tests do not validate the migrated Bolt backend.

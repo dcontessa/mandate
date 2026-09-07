@@ -12,3 +12,7 @@
 - Authenticated browser flow, real Terminal 3 grant/TEE/receiver integration, public deployment, public GitHub creation and YouTube recording remain outstanding.
 
 Implementation was generated with Codex in this working session. Independent Claude/Perplexity review and practitioner testing have not yet returned findings for this build. Do not list them as completed validation.
+
+## 8 September 2026 delivery update
+
+Published synthetic Bolt demo and uploaded unlisted 2:17 ElevenLabs-narrated video. Public desktop/mobile preview and six fixture hashes verified. Local build and 16 in-memory controls pass. Removed a generated test-provisioning endpoint and hard-coded synthetic test credentials from current source. Bolt reports the six exposed accounts banned and sessions revoked. Hosted concurrency remains unverified; no T3 execution is claimed. Form draft filled except WhatsApp; not submitted.

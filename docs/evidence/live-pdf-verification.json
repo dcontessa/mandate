@@ -1,0 +1,50 @@
+[
+  {
+    "id": "doc_board_v1",
+    "status": 200,
+    "bytes": 2953,
+    "sha256": "4bb3b7aba9177209047930b7b39cd170bf3e6efe0e76fcc40b5e584e9de0dabd",
+    "matches_expected": true,
+    "pdf": true
+  },
+  {
+    "id": "doc_bank_v1",
+    "status": 200,
+    "bytes": 2836,
+    "sha256": "028b8fff16689739a0158c606152f51e88fcdf76ba981d106878d4f7ac20cf20",
+    "matches_expected": true,
+    "pdf": true
+  },
+  {
+    "id": "doc_bank_v2",
+    "status": 200,
+    "bytes": 2896,
+    "sha256": "9095aff7c1ed661fcfdd7df7b534b365e53fc8f22425a776956d3052f1aae27c",
+    "matches_expected": true,
+    "pdf": true
+  },
+  {
+    "id": "doc_bank_v3",
+    "status": 200,
+    "bytes": 2865,
+    "sha256": "297fb0787e2fecefc6c280bd06efe2f0605deebe89c4ff67e6773ffb26f91864",
+    "matches_expected": true,
+    "pdf": true
+  },
+  {
+    "id": "doc_accounts_v1",
+    "status": 200,
+    "bytes": 2954,
+    "sha256": "0c8b6e6cc0bcb1f17269b1b8d5a8ff391e99452b574bd3b0c81ace148a47965e",
+    "matches_expected": true,
+    "pdf": true
+  },
+  {
+    "id": "doc_tax_v1",
+    "status": 200,
+    "bytes": 2905,
+    "sha256": "b8946a8ce347aadf8c1f7d0906d729cfcd2db647b01c912a17b7e8d568c8b05f",
+    "matches_expected": true,
+    "pdf": true
+  }
+]

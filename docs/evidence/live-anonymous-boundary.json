@@ -1,0 +1,58 @@
+[
+  {
+    "path": "create",
+    "status": 401,
+    "response": {
+      "error": "Sign in to access your workspace.",
+      "code": "SIGN_IN_REQUIRED"
+    }
+  },
+  {
+    "path": "command",
+    "status": 401,
+    "response": {
+      "error": "Sign in to access your workspace.",
+      "code": "SIGN_IN_REQUIRED"
+    }
+  },
+  {
+    "path": "invite",
+    "status": 401,
+    "response": {
+      "error": "Sign in to access your workspace.",
+      "code": "SIGN_IN_REQUIRED"
+    }
+  },
+  {
+    "path": "join",
+    "status": 401,
+    "response": {
+      "error": "Sign in to access your workspace.",
+      "code": "SIGN_IN_REQUIRED"
+    }
+  },
+  {
+    "path": "document?workspace=unrelated&document=doc_bank_v1",
+    "status": 503,
+    "response": {
+      "error": "Database error.",
+      "code": "UNAVAILABLE"
+    }
+  },
+  {
+    "path": "evidence?workspace=unrelated",
+    "status": 503,
+    "response": {
+      "error": "Database error.",
+      "code": "UNAVAILABLE"
+    }
+  },
+  {
+    "path": "sample?document=not-allowlisted",
+    "status": 404,
+    "response": {
+      "error": "Sample unavailable.",
+      "code": "NOT_FOUND"
+    }
+  }
+]

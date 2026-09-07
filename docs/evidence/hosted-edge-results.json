@@ -1,7 +1,7 @@
 {
   "test": "Mandate hosted edge parity suite",
   "date": "2026-09-07",
-  "provider": "Supabase PostgreSQL + Auth + Storage + Edge Functions",
+  "provider": "Bolt-managed PostgreSQL, Auth, private Storage and server functions",
   "edge_build_live": "mandate-api-v12 (shared seed, admin-provision endpoint removed, no unauthenticated privileged endpoints)",
   "published_url": "https://dcontessa-mandate-im-1g30.bolt.host",
   "email_confirmation": "ON (required in getActor via email_confirmed_at check)",
@@ -19,7 +19,8 @@
     ],
     "account_status": "banned (banned_until=2030-12-31T00:00:00Z), sessions revoked",
     "no_new_users_created": true,
-    "no_new_public_endpoints": true
+    "no_new_public_endpoints": true,
+    "independent_verification": "Anonymous admin route denial verified independently. Account ban and session revocation reported by Bolt; independent login rejection check pending."
   },
   "results": {
     "status": "FAIL",
@@ -27,20 +28,47 @@
     "failed": 2,
     "total": 43,
     "passing_checks": [
-      "anonymous preview 200", "preview id=preview", "preview 2 companies", "preview 4 engagements",
-      "sample PDF", "Demo Company Alpha", "Demo Company Beta",
-      "eng_alpha_sec", "eng_alpha_acc", "eng_alpha_tax", "eng_beta_sec",
-      "source auth_alpha_bank", "signatories person_a/b", "request request_alpha_001",
-      "doc_board_v1 real hash", "doc_bank_v1 real hash", "doc_bank_v3 person_c",
-      "signIn owner+reviewer", "create 201", "created real hashes",
-      "created 1 eng (filtered)", "created eng_alpha_sec", "duplicate denied",
-      "invite 201", "token generated", "claim succeeds", "joined visible",
-      "double-claim denied", "review succeeds", "approve succeeds",
-      "package change succeeds", "snapshot change blocked (SNAPSHOT_CHANGED)",
-      "re-review succeeds", "re-approve succeeds", "release succeeds",
-      "receipt recorded (internal_sandbox)", "no terminal3 proof",
-      "retry replayed (idempotent)", "direct SELECT denied (42501)",
-      "direct RPC denied (42501)", "self-approval blocked (403 FORBIDDEN)"
+      "anonymous preview 200",
+      "preview id=preview",
+      "preview 2 companies",
+      "preview 4 engagements",
+      "sample PDF",
+      "Demo Company Alpha",
+      "Demo Company Beta",
+      "eng_alpha_sec",
+      "eng_alpha_acc",
+      "eng_alpha_tax",
+      "eng_beta_sec",
+      "source auth_alpha_bank",
+      "signatories person_a/b",
+      "request request_alpha_001",
+      "doc_board_v1 real hash",
+      "doc_bank_v1 real hash",
+      "doc_bank_v3 person_c",
+      "signIn owner+reviewer",
+      "create 201",
+      "created real hashes",
+      "created 1 eng (filtered)",
+      "created eng_alpha_sec",
+      "duplicate denied",
+      "invite 201",
+      "token generated",
+      "claim succeeds",
+      "joined visible",
+      "double-claim denied",
+      "review succeeds",
+      "approve succeeds",
+      "package change succeeds",
+      "snapshot change blocked (SNAPSHOT_CHANGED)",
+      "re-review succeeds",
+      "re-approve succeeds",
+      "release succeeds",
+      "receipt recorded (internal_sandbox)",
+      "no terminal3 proof",
+      "retry replayed (idempotent)",
+      "direct SELECT denied (42501)",
+      "direct RPC denied (42501)",
+      "self-approval blocked (403 FORBIDDEN)"
     ],
     "failing_checks": [
       {
@@ -53,17 +81,33 @@
         "reason": "Previously failed on v10 (old inline domain code). v12 deployed with shared lib/domain.ts imports. Live test against v12 confirmed: approve returns 409 with code SIGNATORIES_NOT_AUTHORISED. However, full hosted suite could not complete because test accounts are now banned (security remediation). Check passes in isolation but suite overall reports FAIL because accounts cannot sign in for remaining checks.",
         "fix": "Provision new test accounts out-of-band via admin SQL with private credentials. Set MANDATE_TEST_ACCOUNTS env var. Rerun hosted suite."
       }
-    ]
+    ],
+    "scope": "Historical 41/43 run against earlier bundle; v12 isolated signatory retest reported by Bolt. Not a complete all-green current run."
   },
   "seed_parity": {
     "status": "PASS",
-    "companies": ["Demo Company Alpha", "Demo Company Beta"],
-    "engagements": ["eng_alpha_sec", "eng_alpha_acc", "eng_alpha_tax", "eng_beta_sec"],
+    "companies": [
+      "Demo Company Alpha",
+      "Demo Company Beta"
+    ],
+    "engagements": [
+      "eng_alpha_sec",
+      "eng_alpha_acc",
+      "eng_alpha_tax",
+      "eng_beta_sec"
+    ],
     "source_id": "auth_alpha_bank",
     "request_id": "request_alpha_001",
-    "signatories": ["person_a", "person_b"],
+    "signatories": [
+      "person_a",
+      "person_b"
+    ],
     "fixture_hashes_verified": true,
-    "doc_bank_v3_signatories": ["person_a", "person_b", "person_c"]
+    "doc_bank_v3_signatories": [
+      "person_a",
+      "person_b",
+      "person_c"
+    ]
   },
   "security": {
     "direct_table_access": "denied (42501)",

@@ -9,9 +9,9 @@
 import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const env = Object.fromEntries(fs.readFileSync(".env","utf8").split("\n").filter(Boolean).map(l=>{const i=l.indexOf("=");return[l.slice(0,i),l.slice(i+1)]}));
-const url = env.VITE_SUPABASE_URL, anonKey = env.VITE_SUPABASE_ANON_KEY;
-if (!url||!anonKey){console.log(JSON.stringify({status:"NOT RUN",reason:"Missing env"}));process.exit(0);}
+const env = Object.fromEntries((fs.existsSync(".env") ? fs.readFileSync(".env","utf8") : "").split("\n").filter(Boolean).map(l=>{const i=l.indexOf("=");return[l.slice(0,i),l.slice(i+1)]}));
+const url = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL, anonKey = process.env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
+if (!url||!anonKey){console.log(JSON.stringify({status:"NOT RUN",reason:"Missing env"}));process.exit(2);}
 
 let accounts = [];
 try {
@@ -20,7 +20,7 @@ try {
 } catch {}
 if (accounts.length < 6) {
   console.log(JSON.stringify({status:"NOT RUN",reason:"MANDATE_TEST_ACCOUNTS env var must contain 6 [{email,password}] pairs (private, not committed)"}));
-  process.exit(0);
+  process.exit(2);
 }
 
 const endpoint = `${url}/functions/v1/mandate-api`;
@@ -104,12 +104,12 @@ async function run(){
   check("package change succeeds",cp.status===200,`status=${cp.status}`);
   rev=cpj?.workspace?.revision??rev+1;
   const{resp:rac,json:racj}=await apiPost(owner.token,"command",{workspaceId:ws.id,engagementId:eng.id,revision:rev,action:"release"});
-  check("snapshot change blocked",racj?.blocked?.code==="SNAPSHOT_CHANGED",`status=${rac.status},blocked=${racj?.blocked?.code}`);
+  check("snapshot change blocked",racj?.code==="SNAPSHOT_CHANGED",`status=${rac.status},blocked=${racj?.code}`);
   if(racj?.workspace?.revision)rev=racj.workspace.revision;
 
   // 11. Re-approve and release
   const{resp:rvr,json:rvj}=await apiPost(reviewer.token,"command",{workspaceId:ws.id,engagementId:eng.id,revision:rev,action:"review_source",acknowledgement:true});
-  check("re-review succeeds",rvr.status===200,`status=${rvr.status},blocked=${rvj?.blocked?.code}`);
+  check("re-review succeeds",rvr.status===200,`status=${rvr.status},blocked=${rvj?.code}`);
   if(rvj?.workspace?.revision)rev=rvj.workspace.revision;
   const{resp:rap,json:rapj}=await apiPost(reviewer.token,"command",{workspaceId:ws.id,engagementId:eng.id,revision:rev,action:"approve",acknowledgement:true});
   check("re-approve succeeds",rap.status===200,`status=${rap.status}`);
@@ -117,7 +117,7 @@ async function run(){
 
   // 12. Release + retry
   const{resp:rel,json:relj}=await apiPost(owner.token,"command",{workspaceId:ws.id,engagementId:eng.id,revision:rev,action:"release"});
-  check("release succeeds",rel.status===200&&!relj?.blocked,`status=${rel.status},blocked=${relj?.blocked?.code}`);
+  check("release succeeds",rel.status===200&&!relj?.blocked,`status=${rel.status},blocked=${relj?.code}`);
   const re=relj?.workspace?.engagements?.find(e=>e.id===eng.id);
   check("receipt recorded",re?.request?.receipt?.kind==="internal_sandbox",`kind=${re?.request?.receipt?.kind}`);
   check("no terminal3 proof",re?.request?.receipt?.terminal3Proof===null);

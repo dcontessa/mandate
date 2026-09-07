@@ -1,44 +1,31 @@
-# Actual verification — 7 September 2026
+# Verification record — 8 September 2026
 
-**18 automated checks passed:** 16 application HTTP/SQLite control tests and 2 compiled Worker smoke tests. TypeScript checking and the production build passed. This evidence supports the described prototype only.
+This is a synthetic working prototype, not production certification. Local tests and hosted checks are separate evidence layers.
 
-| Check | Observed result | Evidence and scope |
+| Check | Observed result | Scope |
 |---|---|---|
-| HTTP control suite | 16 passed, 0 failed | [JUnit output](evidence/controls.junit.xml). Real SQLite SQL, injected test identities and test file adapter |
-| Compiled Worker | 2 passed, 0 failed | [Worker result](evidence/worker-smoke.txt). Miniflare/workerd, compatibility date 2026-05-22 |
-| TypeScript | Pass | `npm run typecheck`, strict checking |
-| Production build | Pass | Vinext 0.0.50, React 19.2.6, Next dependency updated to 16.3.4; Worker entrypoint and API route emitted |
-| Production dependency audit | 0 reported vulnerabilities | [App report](evidence/app-dependency-audit.json); [T3 adapter report](evidence/terminal3-dependency-audit.json). `npm audit --omit=dev`; not a complete security assessment |
-| SDK import check | Pass | [SDK record](evidence/sdk-check.txt), Terminal 3 SDK 5.11.0 in plain Node |
-| Live provider authentication | NOT RUN | Missing `T3N_API_KEY`; smoke script exited 2, no DID produced |
-| Public deployment | BLOCKED | Sites returned account hosting usage limit. No Site created or unrelated Site changed |
-| Hosted identity and two-person browser approval | NOT RUN | Requires deployment and two actual authenticated accounts |
-| Human / external model review | NOT RUN for this build | Handoff supplied; no returned findings claimed |
+| Local production build | PASS | TypeScript and Vite build, run after migration |
+| Local HTTP controls | 16/16 PASS | In-memory repository and explicit test identities; not PostgreSQL concurrency proof |
+| Public deployment | PASS | https://dcontessa-mandate-im-1g30.bolt.host/ rendered in Chrome |
+| Public preview | PASS | Two original companies, four engagements, six synthetic PDFs |
+| PDF integrity | PASS | All six live sample bytes matched original SHA-256 hashes |
+| Anonymous mutations | DENIED | create, command, invitation and join require sign-in |
+| Desktop UI | PASS for inspected flows | Service filters, versions, authority, release, documents and clients |
+| Mobile UI | PASS for inspected flows | 390 × 844 viewport, no horizontal document overflow; release controls disabled in preview |
+| Email confirmation | ON | Verified in Bolt Authentication settings |
+| Hosted functional suite | PARTIAL | Bolt reported 41/43 earlier checks; see historical [hosted results](evidence/hosted-edge-results.json). Later cleaned deployment blocked the added-signatory case; full latest suite is not claimed |
+| Hosted concurrent release | UNVERIFIED | Requests timed out; timeout does not establish correct serialization |
+| Temporary admin route | DENIED after removal | Anonymous POST /admin-provision independently returned 401 |
+| Synthetic test credentials | REMEDIATED BY BOLT | Bolt reports six dedicated accounts banned and sessions revoked. Hard-coded credentials removed from current source; old Git history remains exposed. Independent login rejection check not completed |
+| YouTube demo | PASS | https://youtu.be/N65O1tgPg7Q uploaded unlisted; player progressed, duration 137.441 seconds |
+| Video export | PASS | H.264/AAC, 1920 × 1080, 137.417 seconds; composition runtime/layout/contrast checks passed |
+| Terminal 3 | DISCONNECTED | SDK 5.11.0 rejects trust-manifest schema before authentication. No bypass used |
+| Hackathon submission | NOT SUBMITTED | Form draft populated, WhatsApp contact pending |
 
-## Acceptance scenario mapping
+## Remaining verification
 
-| Scenario from fixture pack | Evidence in this build | Status |
-|---|---|---|
-| S01 authorised real T3 release | Internal sandbox workflow passes; no external provider execution | Internal flow PASS; live S01 NOT RUN |
-| S02 unauthorised C | Direct HTTP command blocked, no receipt | PASS |
-| S03 v2 substituted after v1 approval | Digest mismatch blocked | PASS |
-| S04 recipient substituted | Digest mismatch blocked | PASS |
-| S05 client/service/tenant crossing | Direct document and command endpoints denied for all three | PASS in HTTP/SQLite harness |
-| S06 source expires before execution | Server-time check blocks | PASS |
-| S07 missing real T3 outbound grant | Disconnected application mode fails closed; provider grant denial untested | Application block PASS; real S07 NOT RUN |
-| S08 external receiver accepts, worker times out | Internal receipt deduplication and stale-save rejection pass | Internal retry PASS; external S08 NOT RUN |
-| S09 missing approval/self-approval | Missing review and preparer/agent approvals denied | PASS |
+Verify the reported account bans independently, rerun hosted concurrency and membership-revocation checks, reconcile deployed SQL to checked-in migrations, and conduct an actual two-person browser walkthrough. Do not use real client records while these are outstanding.
 
-Additional tests cover corrupted stored bytes, reviewer revocation before execution, CSRF, unauthenticated mutation, strict payload validation, invitation scope/reuse, approval expiry, changed policy and concurrent compare-and-swap writes.
+The video illustrates the prototype workflow and source PDFs. It does not show a real Terminal 3 execution or external delivery. Voiceover was generated with ElevenLabs.
 
-## Browser observations
-
-The internal desktop browser rendered the real interface at approximately 1363 CSS pixels wide. Checked work queue navigation, all six document records, v2 comparison with unchanged A+B and a changed hash, authority/release tabs, service selection, no-match search and keyboard search clearing, empty activity evidence, and read-only controls. An earlier development screenshot is included at [preview.jpg](preview.jpg).
-
-No application error was observed during these interactions; captured browser console errors were from the browser extension. The final full-page capture and scrolling operation timed out in the browser service. The available browser API did not provide a verified viewport resize, so mobile-device and 200% enlargement checks are **not claimed**. Responsive CSS is implemented; it still needs actual mobile-browser verification.
-
-## Corrections made during verification
-
-Fixed a JSX handler syntax error, completed Worker runtime types, used an actual Worker emulator for the compiled artifact rather than importing `cloudflare:` modules into Node, and matched the emulator’s supported compatibility date. The first dependency audit found five vulnerable production dependency packages; updated the affected Next.js/transitive dependency versions. Both final production dependency audits reported zero known vulnerabilities.
-
-The public preview disables sign-in controls when trusted authentication is not configured. A new UI is not evidence of enterprise readiness. No immutable-audit, legal compliance, production recovery, provider-delivery or independent-certification claim is made.
+[Historical Build 01 evidence](baseline/build01-evidence.md) concerns the earlier Cloudflare build only. Historical provider test artifacts may describe earlier bundles and must not be treated as a current all-green result.
