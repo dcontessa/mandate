@@ -1,0 +1,2 @@
+[functions.mandate-api]
+verify_jwt = true

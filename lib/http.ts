@@ -89,7 +89,7 @@ function view(state: WorkspaceState, members: Member[], actor: Actor) {
       connected: false,
       detail: "Live Terminal 3 execution has not been connected.",
     },
-    signInPath: "/signin-with-chatgpt?return_to=%2F",
+    signInPath: "#signin",
   };
 }
 async function body(request: Request) {
@@ -146,7 +146,7 @@ export async function handleApi(request: Request, ctx: Context) {
           workspace: previewState,
           memberships: [],
           terminal3: { connected: false, detail: "Not connected" },
-          signInPath: "/signin-with-chatgpt?return_to=%2F",
+          signInPath: "#signin",
         });
       const list = await ctx.repo.forUser(ctx.actor.id),
         selected = url.searchParams.get("workspace") || list[0]?.id;
@@ -158,7 +158,7 @@ export async function handleApi(request: Request, ctx: Context) {
           workspace: previewState,
           memberships: [],
           terminal3: { connected: false, detail: "Not connected" },
-          signInPath: "/signin-with-chatgpt?return_to=%2F",
+          signInPath: "#signin",
         });
       const s = await scoped(ctx, selected);
       return response({
@@ -306,30 +306,22 @@ export async function handleApi(request: Request, ctx: Context) {
           "Invite a different reviewer.",
           400,
         );
-      const count = await ctx.repo.db
-        .prepare("SELECT count(*) as n FROM invitations WHERE workspace_id=?")
-        .bind(b.workspaceId)
-        .first<{ n: number }>();
-      if ((count?.n || 0) >= 10)
+      const count = await ctx.repo.countInvitations(b.workspaceId);
+      if (count >= 10)
         throw new DomainError(
           "INVITE_LIMIT",
           "This sandbox has reached its invitation limit.",
           429,
         );
       const token = crypto.randomUUID() + crypto.randomUUID();
-      await ctx.repo.db
-        .prepare(
-          "INSERT INTO invitations(token_hash,workspace_id,inviter_id,email,engagement_id,expires_at) VALUES(?,?,?,?,?,?)",
-        )
-        .bind(
-          await digest(token),
-          b.workspaceId,
-          s.actor.id,
-          b.email.toLowerCase(),
-          b.engagementId,
-          ctx.now() + 86400000,
-        )
-        .run();
+      await ctx.repo.createInvitation(
+        await digest(token),
+        b.workspaceId,
+        s.actor.id,
+        b.email,
+        b.engagementId,
+        ctx.now() + 86400000,
+      );
       return response(
         { invitePath: `/?invite=${token}`, expiresInHours: 24 },
         201,
@@ -340,21 +332,8 @@ export async function handleApi(request: Request, ctx: Context) {
           .object({ token: z.string().min(60).max(100) })
           .strict()
           .parse(await body(request)),
-        actor = actorOf(ctx),
-        hash = await digest(b.token);
-      const row = await ctx.repo.db
-        .prepare(
-          "SELECT workspace_id,inviter_id,email,engagement_id,expires_at,claimed_by FROM invitations WHERE token_hash=?",
-        )
-        .bind(hash)
-        .first<{
-          workspace_id: string;
-          inviter_id: string;
-          email: string;
-          engagement_id: string;
-          expires_at: number;
-          claimed_by: string | null;
-        }>();
+        actor = actorOf(ctx);
+      const row = await ctx.repo.getInvitation(await digest(b.token));
       if (
         !row ||
         row.claimed_by ||
@@ -367,18 +346,17 @@ export async function handleApi(request: Request, ctx: Context) {
           "This invitation is expired, used or intended for another reviewer.",
           403,
         );
-      await ctx.repo.db.batch([
-        ctx.repo.db
-          .prepare(
-            "INSERT INTO memberships(workspace_id,user_id,engagement_id,role) SELECT workspace_id,?,engagement_id,'reviewer' FROM invitations WHERE token_hash=? AND claimed_by IS NULL AND expires_at>?",
-          )
-          .bind(actor.id, hash, ctx.now()),
-        ctx.repo.db
-          .prepare(
-            "UPDATE invitations SET claimed_by=? WHERE token_hash=? AND claimed_by IS NULL",
-          )
-          .bind(actor.id, hash),
-      ]);
+      const claimed = await ctx.repo.claimInvitation(
+        await digest(b.token),
+        actor.id,
+        ctx.now(),
+      );
+      if (!claimed)
+        throw new DomainError(
+          "INVITE_INVALID",
+          "This invitation is expired, used or intended for another reviewer.",
+          403,
+        );
       const s = await scoped(ctx, row.workspace_id);
       return response(view(s.state, s.members, s.actor));
     }

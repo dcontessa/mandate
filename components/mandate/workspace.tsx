@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useState, useCallback } from "react";
 import {
   BriefcaseBusiness,
@@ -55,6 +54,8 @@ import { toast } from "sonner";
 import { previewState } from "@/lib/seed";
 import type { WorkspaceView, Engagement, DocumentRecord } from "@/lib/types";
 import { EngagementPanel } from "./engagement-panel";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 const nav = [
   { id: "work", label: "Work queue", icon: BriefcaseBusiness },
   { id: "clients", label: "Clients", icon: Building2 },
@@ -75,7 +76,7 @@ const initial: WorkspaceView = {
   workspace: previewState,
   memberships: [],
   terminal3: { connected: false, detail: "Not connected" },
-  signInPath: "/signin-with-chatgpt?return_to=%2F",
+  signInPath: "#signin",
 };
 export const readable = (s: string) => s.replaceAll("_", " ");
 export function Status({ value }: { value: string }) {
@@ -88,6 +89,7 @@ export function Status({ value }: { value: string }) {
   return <span className={`status ${tone}`}>{readable(value)}</span>;
 }
 export function MandateApp() {
+  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
   const [data, setData] = useState<WorkspaceView>(initial),
     [section, setSection] = useState("work"),
     [service, setService] = useState("all"),
@@ -103,6 +105,18 @@ export function MandateApp() {
     [email, setEmail] = useState(""),
     [inviteLink, setInviteLink] = useState(""),
     [inviteToken, setInviteToken] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const authHeaders = useCallback(() => {
+    return supabase.auth.getSession().then(({ data }) => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (data.session?.access_token) headers["Authorization"] = `Bearer ${data.session.access_token}`;
+      return headers;
+    });
+  }, []);
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -110,7 +124,8 @@ export function MandateApp() {
       const suffix = q.get("workspace")
         ? `?workspace=${encodeURIComponent(q.get("workspace")!)}`
         : "";
-      const r = await fetch(`/api/mandate${suffix}`);
+      const headers = await authHeaders();
+      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mandate-api${suffix}`, { headers });
       const json = (await r.json()) as ApiResult;
       if (!r.ok) throw new Error(json.error || "Unable to load workspace.");
       setData(json);
@@ -122,19 +137,25 @@ export function MandateApp() {
     }
   }, []);
   useEffect(() => {
+    if (authLoading) return;
     load();
     const token = new URLSearchParams(location.search).get("invite");
     if (token) {
       setInviteToken(token);
       setModal("join");
     }
-  }, [load]);
+    if (location.hash === "#signin") setShowAuth(true);
+    const onHash = () => setShowAuth(location.hash === "#signin");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [load, authLoading, user?.id]);
   async function post(path: string, body: unknown) {
     setBusy(true);
     try {
-      const r = await fetch(`/api/mandate/${path}`, {
+      const headers = await authHeaders();
+      const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mandate-api/${path}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(body),
         }),
         j = (await r.json()) as ApiResult;
@@ -185,8 +206,8 @@ export function MandateApp() {
   const docs = data.workspace.engagements.flatMap((e) => e.documents);
   function docUrl(d: DocumentRecord) {
     return isPreview
-      ? `/api/mandate/sample?document=${d.id}`
-      : `/api/mandate/document?workspace=${data.workspace.id}&engagement=${d.engagementId}&document=${d.id}`;
+      ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mandate-api/sample?document=${d.id}`
+      : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mandate-api/document?workspace=${data.workspace.id}&engagement=${d.engagementId}&document=${d.id}`;
   }
   function choose(e: Engagement) {
     setSelected(e.id);
@@ -282,20 +303,66 @@ export function MandateApp() {
             >
               <RefreshCw size={17} className={loading ? "spin" : ""} />
             </Button>
-            {data.actor ? (
-              <span className="identity-label">Signed in</span>
-            ) : data.authAvailable ? (
+            {user ? (
+              <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                Sign out
+              </Button>
+            ) : (
               <Button asChild variant="outline">
-                <a href={data.signInPath} target="_top">
+                <a href="#signin">
                   <LogIn size={15} />
                   Sign in
                 </a>
               </Button>
-            ) : (
-              <span className="identity-label">Preview mode</span>
             )}
           </div>
         </header>
+        <Dialog open={showAuth && !user} onOpenChange={(open) => {
+          if (!open) { setShowAuth(false); location.hash = ""; }
+        }}>
+          <DialogContent className="mandate-dialog">
+            <DialogHeader>
+              <DialogTitle>{authMode === "signin" ? "Sign in" : "Create account"}</DialogTitle>
+              <DialogDescription>
+                {authMode === "signin"
+                  ? "Sign in to create your isolated sandbox and work with synthetic engagements."
+                  : "Create an account to start your own synthetic sandbox."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="dialog-fields">
+              <label htmlFor="auth-email">Email</label>
+              <Input id="auth-email" type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="you@example.com" />
+              <label htmlFor="auth-password">Password</label>
+              <Input id="auth-password" type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="At least 6 characters" />
+              <Button
+                disabled={authBusy || !authEmail || !authPassword}
+                onClick={async () => {
+                  setAuthBusy(true);
+                  try {
+                    if (authMode === "signin") await signIn(authEmail, authPassword);
+                    else await signUp(authEmail, authPassword);
+                    setShowAuth(false);
+                    location.hash = "";
+                    toast.success(authMode === "signin" ? "Signed in." : "Account created. You are signed in.");
+                    load();
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  } finally {
+                    setAuthBusy(false);
+                  }
+                }}
+              >
+                {authBusy ? "Please wait…" : authMode === "signin" ? "Sign in" : "Create account"}
+              </Button>
+              <button
+                className="auth-toggle"
+                onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")}
+              >
+                {authMode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <div className="demo-banner">
           <ShieldCheck size={16} />
           <span>Synthetic demo data — no real client records</span>
@@ -335,8 +402,8 @@ export function MandateApp() {
             {isPreview ? (
               <Button
                 onClick={async () => {
-                  if (!data.actor) {
-                    location.assign(data.signInPath);
+                  if (!user) {
+                    location.hash = "signin";
                     return;
                   }
                   try {
@@ -347,12 +414,10 @@ export function MandateApp() {
                     toast.error((e as Error).message);
                   }
                 }}
-                disabled={busy || loading || !data.authAvailable}
+                disabled={busy || loading || !user}
               >
                 <Plus size={16} />
-                {data.authAvailable
-                  ? "Create my sandbox"
-                  : "Sandbox needs sign-in"}
+                {user ? "Create my sandbox" : "Sandbox needs sign-in"}
               </Button>
             ) : (
               <Button
@@ -636,7 +701,7 @@ export function MandateApp() {
                     </span>
                   ) : (
                     <a
-                      href={`/api/mandate/evidence?workspace=${data.workspace.id}`}
+                      href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mandate-api/evidence?workspace=${data.workspace.id}`}
                     >
                       <Download size={16} />
                       Export evidence
@@ -796,7 +861,7 @@ export function MandateApp() {
                 <Button asChild>
                   <a
                     target="_top"
-                    href={`/signin-with-chatgpt?return_to=${encodeURIComponent("/?invite=" + inviteToken)}`}
+                    href={`#signin?return_to=${encodeURIComponent("/?invite=" + inviteToken)}`}
                   >
                     Sign in to accept
                   </a>

@@ -1,2 +1,10 @@
-/// <reference types="@cloudflare/workers-types" />
-declare namespace Cloudflare { interface Env { DB: D1Database; BUCKET: R2Bucket; MANDATE_AUTH_MODE?: "sites-dispatch"; } }
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

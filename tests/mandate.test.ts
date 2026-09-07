@@ -3,28 +3,181 @@ import assert from "node:assert/strict";
 import fixtureBytes from "../lib/fixture-bytes.json" with { type: "json" };
 import { handleApi } from "../lib/http.ts";
 import type { Context } from "../lib/http.ts";
-import type { WorkspaceView, Actor, WorkspaceState } from "../lib/types.ts";
-import { Repository } from "../lib/repository.ts";
-import { testDatabase } from "./sqlite-adapter.ts";
-const preparer = {
+import type { WorkspaceView, Actor, Member, WorkspaceState } from "../lib/types.ts";
+import { DomainError } from "../lib/types.ts";
+import { digest } from "../lib/domain.ts";
+import { seedWorkspace } from "../lib/seed.ts";
+
+interface TestDB {
+  workspaces: Map<string, { state: WorkspaceState; revision: number; ownerId: string }>;
+  memberships: Map<string, Member>;
+  invitations: Map<string, {
+    workspace_id: string;
+    inviter_id: string;
+    email: string;
+    engagement_id: string;
+    expires_at: number;
+    claimed_by: string | null;
+  }>;
+}
+
+function memberKey(ws: string, user: string, eng: string) {
+  return `${ws}:${user}:${eng}`;
+}
+
+class TestRepository {
+  db: TestDB;
+
+  constructor() {
+    this.db = {
+      workspaces: new Map(),
+      memberships: new Map(),
+      invitations: new Map(),
+    };
+  }
+
+  async state(id: string): Promise<WorkspaceState> {
+    const row = this.db.workspaces.get(id);
+    if (!row) throw new DomainError("NOT_FOUND", "Workspace unavailable.", 404);
+    return structuredClone(row.state);
+  }
+
+  async members(id: string): Promise<Member[]> {
+    const result: Member[] = [];
+    for (const m of this.db.memberships.values()) {
+      if (m.userId && this.db.workspaces.has(id)) {
+        // Check if this membership belongs to this workspace
+        for (const [key, mem] of this.db.memberships) {
+          if (key.startsWith(`${id}:`)) result.push({ ...mem });
+        }
+        break;
+      }
+    }
+    return result.filter((m) => {
+      for (const [key] of this.db.memberships) {
+        if (key.startsWith(`${id}:`) && key.includes(m.userId) && key.includes(m.engagementId)) return true;
+      }
+      return false;
+    });
+  }
+
+  async forUser(userId: string): Promise<{ id: string }[]> {
+    const ids = new Set<string>();
+    for (const [key] of this.db.memberships) {
+      const parts = key.split(":");
+      if (parts[1] === userId) ids.add(parts[0]);
+    }
+    return [...ids].slice(0, 20).map((id) => ({ id }));
+  }
+
+  async create(state: WorkspaceState): Promise<void> {
+    this.db.workspaces.set(state.id, {
+      state: structuredClone(state),
+      revision: 0,
+      ownerId: state.ownerId,
+    });
+    this.db.memberships.set(
+      memberKey(state.id, state.ownerId, "eng_alpha_sec"),
+      { userId: state.ownerId, engagementId: "eng_alpha_sec", role: "preparer" },
+    );
+  }
+
+  async save(state: WorkspaceState, expected: number): Promise<void> {
+    const row = this.db.workspaces.get(state.id);
+    if (!row || row.revision !== expected) {
+      throw new DomainError(
+        "STALE_VERSION",
+        "Someone changed this workspace. Refresh and review the current version.",
+      );
+    }
+    state.revision = expected + 1;
+    row.state = structuredClone(state);
+    row.revision = state.revision;
+  }
+
+  async countInvitations(workspaceId: string): Promise<number> {
+    let n = 0;
+    for (const inv of this.db.invitations.values()) {
+      if (inv.workspace_id === workspaceId) n++;
+    }
+    return n;
+  }
+
+  async createInvitation(
+    tokenHash: string,
+    workspaceId: string,
+    inviterId: string,
+    email: string,
+    engagementId: string,
+    expiresAt: number,
+  ): Promise<void> {
+    this.db.invitations.set(tokenHash, {
+      workspace_id: workspaceId,
+      inviter_id: inviterId,
+      email: email.toLowerCase(),
+      engagement_id: engagementId,
+      expires_at: expiresAt,
+      claimed_by: null,
+    });
+  }
+
+  async getInvitation(tokenHash: string) {
+    const inv = this.db.invitations.get(tokenHash);
+    if (!inv) return null;
+    return { ...inv };
+  }
+
+  async claimInvitation(tokenHash: string, userId: string, now: number) {
+    const inv = this.db.invitations.get(tokenHash);
+    if (!inv || inv.claimed_by || inv.expires_at <= now) return null;
+    inv.claimed_by = userId;
+    this.db.memberships.set(memberKey(inv.workspace_id, userId, inv.engagement_id), {
+      userId,
+      engagementId: inv.engagement_id,
+      role: "reviewer",
+    });
+    return { workspace_id: inv.workspace_id, engagement_id: inv.engagement_id };
+  }
+
+  // Test helpers for direct membership manipulation
+  addMembership(ws: string, user: string, eng: string, role: Member["role"]) {
+    this.db.memberships.set(memberKey(ws, user, eng), { userId: user, engagementId: eng, role });
+  }
+
+  removeMembership(ws: string, user: string) {
+    for (const key of [...this.db.memberships.keys()]) {
+      if (key.startsWith(`${ws}:${user}:`)) this.db.memberships.delete(key);
+    }
+  }
+
+  updateRole(ws: string, user: string, role: Member["role"]) {
+    for (const [key, mem] of this.db.memberships) {
+      if (key.startsWith(`${ws}:${user}:`)) {
+        this.db.memberships.set(key, { ...mem, role });
+      }
+    }
+  }
+}
+
+const preparer: Actor = {
   id: "test-preparer",
   email: "preparer@example.test",
   name: "Test preparer",
 };
-const reviewer = {
+const reviewer: Actor = {
   id: "test-reviewer",
   email: "reviewer@example.test",
   name: "Test reviewer",
 };
+
 async function setup(t: { after: (f: () => void) => void }) {
-  const db = testDatabase();
-  t.after(() => db.close());
-  const repo = new Repository(db),
-    files = new Map<string, Uint8Array>();
+  const repo = new TestRepository();
+  const files = new Map<string, Uint8Array>();
   let clock = Date.now();
+
   const context = (actor: Actor | null): Context => ({
     actor,
-    repo,
+    repo: repo as any,
     fixtureBytes,
     now: () => clock,
     files: {
@@ -34,6 +187,7 @@ async function setup(t: { after: (f: () => void) => void }) {
       },
     },
   });
+
   async function call(
     path: string,
     actor: Actor | null = preparer,
@@ -61,9 +215,11 @@ async function setup(t: { after: (f: () => void) => void }) {
         : new Uint8Array(await r.arrayBuffer()),
     };
   }
+
   const created = await call("/create", preparer, {});
   assert.equal(created.status, 201);
   let state = (created.body as WorkspaceView).workspace;
+
   async function cmd(
     action: string,
     actor: Actor = preparer,
@@ -79,6 +235,7 @@ async function setup(t: { after: (f: () => void) => void }) {
     if (result.body.workspace) state = result.body.workspace;
     return result;
   }
+
   const invite = await call("/invite", preparer, {
     workspaceId: state.id,
     engagementId: "eng_alpha_sec",
@@ -87,6 +244,7 @@ async function setup(t: { after: (f: () => void) => void }) {
   assert.equal(invite.status, 201);
   const token = invite.body.invitePath.split("=")[1];
   assert.equal((await call("/join", reviewer, { token })).status, 200);
+
   async function approve() {
     assert.equal(
       (await cmd("review_source", reviewer, { acknowledgement: true })).status,
@@ -97,8 +255,8 @@ async function setup(t: { after: (f: () => void) => void }) {
       200,
     );
   }
+
   return {
-    db,
     repo,
     files,
     call,
@@ -111,7 +269,8 @@ async function setup(t: { after: (f: () => void) => void }) {
     },
   };
 }
-test("actual SQLite workflow: independent review produces one internal sandbox receipt, with no provider proof", async (t) => {
+
+test("independent review produces one internal sandbox receipt, with no provider proof", async (t) => {
   const h = await setup(t);
   await h.approve();
   const r = await h.cmd("release");
@@ -123,6 +282,7 @@ test("actual SQLite workflow: independent review produces one internal sandbox r
   const saved = await h.repo.state(h.state().id);
   assert.equal(saved.engagements[0].request!.receipt!.id, receipt.id);
 });
+
 test("package v3 adds C: professional approval cannot override the source signatory constraint", async (t) => {
   const h = await setup(t);
   await h.approve();
@@ -135,6 +295,7 @@ test("package v3 adds C: professional approval cannot override the source signat
   assert.equal(r.body.blocked.code, "SIGNATORIES_NOT_AUTHORISED");
   assert.equal(h.state().engagements[0].request!.receipt, null);
 });
+
 test("package v2 keeps A+B but invalidates v1 approval", async (t) => {
   const h = await setup(t);
   await h.approve();
@@ -143,6 +304,7 @@ test("package v2 keeps A+B but invalidates v1 approval", async (t) => {
   assert.equal(r.body.blocked.code, "SNAPSHOT_CHANGED");
   assert.equal(h.state().engagements[0].request!.receipt, null);
 });
+
 test("recipient substitution is rejected at the final record boundary", async (t) => {
   const h = await setup(t);
   await h.approve();
@@ -151,7 +313,8 @@ test("recipient substitution is rejected at the final record boundary", async (t
   });
   assert.equal((await h.cmd("release")).body.blocked.code, "SNAPSHOT_CHANGED");
 });
-test("three direct API boundaries: other company, service and tenant deny documents and commands", async (t) => {
+
+test("direct API boundaries: other company, service and tenant deny documents and commands", async (t) => {
   const h = await setup(t);
   const other = await h.call(
     "/create",
@@ -186,12 +349,14 @@ test("three direct API boundaries: other company, service and tenant deny docume
     ["eng_alpha_sec"],
   );
 });
+
 test("source expiry is evaluated using server time at execution", async (t) => {
   const h = await setup(t);
   await h.approve();
   h.advance(3600001);
   assert.equal((await h.cmd("release")).body.blocked.code, "SOURCE_EXPIRED");
 });
+
 test("Terminal 3 mode fails closed even when business checks and snapshot approval pass", async (t) => {
   const h = await setup(t);
   await h.cmd("set_mode", preparer, { mode: "terminal3" });
@@ -201,6 +366,7 @@ test("Terminal 3 mode fails closed even when business checks and snapshot approv
   assert.equal(r.body.blocked.code, "TERMINAL3_NOT_CONNECTED");
   assert.equal(h.state().engagements[0].request!.receipt, null);
 });
+
 test("retry after a lost response returns the existing internal receipt, not a second effect", async (t) => {
   const h = await setup(t);
   await h.approve();
@@ -225,6 +391,7 @@ test("retry after a lost response returns the existing internal receipt, not a s
     1,
   );
 });
+
 test("missing approval, preparer self-approval and agent self-approval denied", async (t) => {
   const h = await setup(t);
   await h.cmd("review_source", reviewer, { acknowledgement: true });
@@ -233,12 +400,7 @@ test("missing approval, preparer self-approval and agent self-approval denied", 
     (await h.cmd("approve", preparer, { acknowledgement: true })).status,
     403,
   );
-  await h.db
-    .prepare(
-      "INSERT INTO memberships(workspace_id,user_id,engagement_id,role) VALUES(?,?,?,'release_agent')",
-    )
-    .bind(h.state().id, "agent", "eng_alpha_sec")
-    .run();
+  h.repo.addMembership(h.state().id, "agent", "eng_alpha_sec", "release_agent");
   assert.equal(
     (
       await h.cmd(
@@ -249,29 +411,23 @@ test("missing approval, preparer self-approval and agent self-approval denied", 
     ).status,
     403,
   );
-  await h.db
-    .prepare(
-      "UPDATE memberships SET role='reviewer' WHERE workspace_id=? AND user_id=?",
-    )
-    .bind(h.state().id, preparer.id)
-    .run();
+  h.repo.updateRole(h.state().id, preparer.id, "reviewer");
   assert.equal(
     (await h.cmd("approve", preparer, { acknowledgement: true })).body.code,
     "SELF_APPROVAL",
   );
 });
+
 test("revoked reviewer cannot carry approval into a later execution", async (t) => {
   const h = await setup(t);
   await h.approve();
-  await h.db
-    .prepare("DELETE FROM memberships WHERE workspace_id=? AND user_id=?")
-    .bind(h.state().id, reviewer.id)
-    .run();
+  h.repo.removeMembership(h.state().id, reviewer.id);
   assert.equal(
     (await h.cmd("release")).body.blocked.code,
     "SOURCE_NOT_REVIEWED",
   );
 });
+
 test("stored file bytes are verified before approval and release", async (t) => {
   const h = await setup(t);
   await h.approve();
@@ -285,6 +441,7 @@ test("stored file bytes are verified before approval and release", async (t) => 
     null,
   );
 });
+
 test("unauthenticated writes, CSRF origins, malformed input and unknown fields rejected", async (t) => {
   const h = await setup(t);
   assert.equal((await h.call("/create", null, {})).status, 401);
@@ -305,6 +462,7 @@ test("unauthenticated writes, CSRF origins, malformed input and unknown fields r
     400,
   );
 });
+
 test("reviewer invitations are single-use, email-bound and reject self-invites", async (t) => {
   const h = await setup(t);
   assert.equal(
@@ -337,6 +495,7 @@ test("reviewer invitations are single-use, email-bound and reject self-invites",
     403,
   );
 });
+
 test("compare-and-swap stops two approved snapshot writes from winning the same revision", async (t) => {
   const h = await setup(t);
   const a = await h.repo.state(h.state().id),
@@ -344,6 +503,7 @@ test("compare-and-swap stops two approved snapshot writes from winning the same 
   await h.repo.save(a, a.revision);
   await assert.rejects(h.repo.save(b, b.revision), { code: "STALE_VERSION" });
 });
+
 test("anonymous fixture preview has no runtime evidence and only public synthetic PDFs", async (t) => {
   const h = await setup(t);
   const r = await h.call("", null);
@@ -360,6 +520,7 @@ test("anonymous fixture preview has no runtime evidence and only public syntheti
     404,
   );
 });
+
 test("approval expiry and changed policy are blocked even when the source is current", async (t) => {
   const h = await setup(t);
   await h.approve();
