@@ -19,7 +19,7 @@ This is a synthetic working prototype, not production certification. Local tests
 | Synthetic test credentials | REMEDIATED BY BOLT | Bolt reports six dedicated accounts banned and sessions revoked. Hard-coded credentials removed from current source; old Git history remains exposed. Independent login rejection check not completed |
 | YouTube demo | PASS | https://youtu.be/N65O1tgPg7Q uploaded unlisted; player progressed, duration 137.441 seconds |
 | Video export | PASS | H.264/AAC, 1920 × 1080, 137.417 seconds; composition runtime/layout/contrast checks passed |
-| Terminal 3 | DISCONNECTED | SDK 5.11.0 rejects trust-manifest schema before authentication. No bypass used |
+| Terminal 3 | DISCONNECTED | SDK 5.2.0 verifies the unmodified signed manifest; real tenant authentication/active lookup and contract registration pass. Agent grant, receiver and hosted execution remain unverified |
 | Hackathon submission | NOT SUBMITTED | Form draft populated, WhatsApp contact pending |
 
 ## Remaining verification

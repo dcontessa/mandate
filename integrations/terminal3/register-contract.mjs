@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {TenantClient,getNodeUrl} from '@terminal3/t3n-sdk';
+import {authenticateTerminal3} from './client.mjs';
+const {client,did}=await authenticateTerminal3(process.env.T3N_API_KEY);
+const tenant=new TenantClient({t3n:client,baseUrl:getNodeUrl(),tenantDid:did});
+const wasm=await readFile(new URL('./contract/target/wasm32-wasip2/release/mandate_release.wasm',import.meta.url));
+const registered=await tenant.contracts.register({tail:'mandate-release',version:'0.1.0',wasm});
+const result={observedAt:new Date().toISOString(),sdk:'5.2.0',environment:'testnet',wasmSha256:createHash('sha256').update(wasm).digest('hex'),wasmBytes:wasm.length,registered,agentGrantVerified:false,externalDelivery:false};
+await writeFile(new URL('../../docs/evidence/terminal3-contract-registration.json',import.meta.url),JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify(result,null,2));
+process.exit(0);

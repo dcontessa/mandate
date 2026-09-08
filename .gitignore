@@ -45,3 +45,5 @@ next-env.d.ts
 **/node_modules/
 *.tsbuildinfo
 .env
+
+/integrations/terminal3/contract/target/

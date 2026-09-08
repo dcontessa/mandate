@@ -38,7 +38,7 @@ Mandate binds that approval to the complete action snapshot and checks it again 
 | Isolation | Server membership checks on documents, commands, views and exports | Hosted gateway/isolation verification |
 | Persistence | Bolt-managed PostgreSQL aggregate/membership model and private storage | Backup and restore verification |
 | Internal sandbox | Atomic receipt and activity save; duplicate request returns existing receipt | External receiver and distributed reconciliation |
-| Terminal 3 | SDK 5.11.0 imports successfully; separate Node authentication adapter; application fails closed | Trust-manifest compatibility, live authentication, agent identity/credits, outbound grant, TEE contract and real receiver |
+| Terminal 3 | SDK 5.2.0 verified manifest, real tenant authentication and active tenant lookup; separate Node adapter | Agent identity/credits, scoped grant, controlled receiver and hosted execution |
 | Accounting and tax | Synthetic reference documents and access boundaries | Complete service workflows; no AutoCount API integration |
 | Auth | Bolt-managed email/password sign-up, sign-in, sign-out; anonymous read-only preview | Email confirmation ON; distinct accounts do not prove distinct people |
 | Demo and docs | Reproducible source, fixture pack, 16 control tests, recording plan | Hosted concurrency and practitioner verification |

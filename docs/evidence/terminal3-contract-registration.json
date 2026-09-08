@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-09-08T06:03:18.536Z",
+  "sdk": "5.2.0",
+  "environment": "testnet",
+  "wasmSha256": "cbd2d30c72ffb978107c2d1048b70939f782dea8cb2b84b4a4960b5e91dbc15a",
+  "wasmBytes": 185518,
+  "registered": {
+    "name": "z:b8c346c23e142bd0c90e3eacfc1020fd5d843249:mandate-release",
+    "contract_id": 930
+  },
+  "agentGrantVerified": false,
+  "externalDelivery": false,
+  "registrationReadBack": "active version 0.1.0",
+  "unconfiguredInvocation": "rejected: CONFIG_UNAVAILABLE",
+  "localContractTests": {
+    "passed": 5,
+    "scope": "signed ticket, changed snapshot, wrong agent, expiry, wrong issuer"
+  }
+}
