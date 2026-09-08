@@ -1,11 +1,11 @@
 // Server-only, plain Node. Never import this package into the browser or Worker.
 //
-// The testnet trust manifest endpoint does not include rtmr1_allowlist (the
-// real rootfs-integrity signal). The RTMR1 value is published at the /status
-// endpoint as runtime_measurement_b64 (slot 3 of the 6×48-byte array).
-// This adapter fetches both endpoints, patches the manifest with the RTMR1
-// value from /status, and builds a verified TrustAnchor via manifestToTrustAnchor.
-// It does NOT use unsafe_trust_server and does NOT invent RTMR values.
+// Uses SDK 5.2.0 with the standard signature-verified fetchTrustedManifest.
+// No /status patch, no unsafe_trust_server, no invented RTMR values.
+// Fails closed if the manifest is missing required fields.
+//
+// manifestToTrustAnchor in 5.2.0 drops expected_peer_ids from the anchor,
+// so we merge it back from the manifest before constructing T3nClient.
 import {
   T3nClient,
   setEnvironment,
@@ -13,54 +13,32 @@ import {
   eth_get_address,
   metamask_sign,
   createEthAuthInput,
+  fetchTrustedManifest,
   manifestToTrustAnchor,
   isUnsafeTrustServer,
 } from "@terminal3/t3n-sdk";
 
-const RTMR1_SLOT_INDEX = 3;
-const RTMR1_SLOT_LEN = 64; // 48 bytes = 64 base64 chars
+const MANIFEST_URL = "https://cn-api.sg.testnet.t3n.terminal3.io/api/trust-manifest";
 
-/**
- * Fetch the trust manifest and /status, patch the manifest with the RTMR1
- * value from /status, and return a verified TrustAnchor.
- */
-export async function resolvePatchedTrustAnchor(env) {
+export async function resolveTrustAnchor(env = "testnet") {
   setEnvironment(env);
-  const nodeUrl = env === "production"
-    ? "https://cn-api.sg.prod.t3n.terminal3.io"
-    : "https://cn-api.sg.testnet.t3n.terminal3.io";
+  const manifest = await fetchTrustedManifest(env);
 
-  const manifestUrl = `${nodeUrl}/api/trust-manifest`;
-  const statusUrl = `${nodeUrl}/status`;
+  if (!manifest.expected_peer_ids?.length)
+    throw new Error("Trust manifest missing expected_peer_ids — refusing");
+  if (!manifest.rtmr3_allowlist?.length)
+    throw new Error("Trust manifest missing rtmr3_allowlist — refusing");
 
-  const [manifestResp, statusResp] = await Promise.all([
-    fetch(manifestUrl),
-    fetch(statusUrl),
-  ]);
+  const anchor = manifestToTrustAnchor(manifest, MANIFEST_URL);
 
-  if (!manifestResp.ok) throw new Error(`Trust manifest fetch failed: ${manifestResp.status}`);
-  if (!statusResp.ok) throw new Error(`Status fetch failed: ${statusResp.status}`);
+  if (isUnsafeTrustServer(anchor))
+    throw new Error("Anchor resolved to unsafe — refusing");
 
-  const manifest = await manifestResp.json();
-  const status = await statusResp.json();
-
-  if (!manifest.rtmr3_allowlist?.length) throw new Error("Manifest has no rtmr3_allowlist");
-  if (!manifest.peer_ids?.length) throw new Error("Manifest has no peer_ids");
-  if (!status.runtime_measurement_b64) throw new Error("Status has no runtime_measurement_b64");
-
-  const rm = status.runtime_measurement_b64;
-  if (rm.length < (RTMR1_SLOT_INDEX + 1) * RTMR1_SLOT_LEN)
-    throw new Error(`runtime_measurement_b64 too short (${rm.length} chars)`);
-
-  const rtmr1 = rm.slice(RTMR1_SLOT_INDEX * RTMR1_SLOT_LEN, (RTMR1_SLOT_INDEX + 1) * RTMR1_SLOT_LEN);
-
-  const patchedManifest = { ...manifest, rtmr1_allowlist: [rtmr1] };
-  const anchor = manifestToTrustAnchor(patchedManifest, manifestUrl);
-
-  if (isUnsafeTrustServer(anchor)) throw new Error("Anchor resolved to unsafe — refusing");
-  if (!anchor.rtmr1_allowlist?.length) throw new Error("Anchor has empty rtmr1_allowlist");
-
-  return anchor;
+  return {
+    expected_peer_ids: manifest.expected_peer_ids,
+    rtmr3_allowlist: anchor.rtmr3_allowlist,
+    source: anchor.source,
+  };
 }
 
 export async function authenticateTerminal3(key) {
@@ -69,7 +47,7 @@ export async function authenticateTerminal3(key) {
   const address = eth_get_address(key);
   const [wasmComponent, trustAnchor] = await Promise.all([
     loadWasmComponent(),
-    resolvePatchedTrustAnchor("testnet"),
+    resolveTrustAnchor("testnet"),
   ]);
   const client = new T3nClient({
     wasmComponent,
@@ -83,20 +61,14 @@ export async function authenticateTerminal3(key) {
   return { client, did: identity.value };
 }
 
-/**
- * Credential-free trust check: verify the TEE cluster's attestation without
- * authenticating as a tenant. Returns the anchor and peer IDs without
- * establishing a session or sending any credential.
- */
 export async function credentialFreeTrustCheck(env = "testnet") {
-  const anchor = await resolvePatchedTrustAnchor(env);
+  const anchor = await resolveTrustAnchor(env);
   return {
     environment: env,
     trustVerified: true,
     unsafe: false,
     expectedPeerIds: anchor.expected_peer_ids,
     rtmr3Allowlist: anchor.rtmr3_allowlist,
-    rtmr1Allowlist: anchor.rtmr1_allowlist,
     manifestSource: anchor.source,
   };
 }

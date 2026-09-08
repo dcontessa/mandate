@@ -1,34 +1,47 @@
 {
-  "test": "Terminal 3 credential-free trust check",
-  "date": "2026-09-07",
-  "sdk_version": "@terminal3/t3n-sdk 5.11.0",
+  "test": "Terminal 3 credential-free trust check + authentication",
+  "date": "2026-09-08",
+  "sdk_version": "@terminal3/t3n-sdk 5.2.0",
   "environment": "testnet",
   "node_url": "https://cn-api.sg.testnet.t3n.terminal3.io",
-  "root_cause": "The testnet trust manifest endpoint at /api/trust-manifest does not include rtmr1_allowlist (required by the SDK's SignedTrustManifest interface since 5.10+). The manifest returns cluster, version, peer_ids, rtmr3_allowlist, signed_at, signature — but omits rtmr1_allowlist. The SDK's fetchTrustedManifest() throws 'Trust manifest at ... is malformed' because the field is missing.",
-  "supported_fix": "The RTMR1 value is published at the /status endpoint as runtime_measurement_b64 (a 384-char base64 string = 6×48-byte RTMR registers). Slot 3 (chars 192-256) contains the value the TDX quote reports as RTMR1. The adapter fetches both endpoints, patches the manifest with rtmr1_allowlist from /status, and builds a verified TrustAnchor via manifestToTrustAnchor(). This does NOT use unsafe_trust_server, does NOT invent RTMR values, and does NOT disable attestation.",
-  "result": {
+  "manifest_url": "https://cn-api.sg.testnet.t3n.terminal3.io/api/trust-manifest",
+  "approach": "SDK 5.2.0 fetchTrustedManifest with operator signature verification. No /status patch, no unsafe_trust_server, no invented RTMR values. Fails closed on missing required fields.",
+  "credential_free_trust_check": {
     "status": "PASS",
     "trustVerified": true,
     "unsafe": false,
     "handshakeSucceeded": true,
-    "didReturned": "did:t3n:c06e485716dc7a98ab965008e95012e7da458608",
+    "didReturned": "did:t3n:04a7469eb31a1771f46cb46bc9d17131ded8087b",
+    "didClassification": "unauthenticated DID from credential-free handshake — NOT a tenant DID. Tenant authentication requires T3N_API_KEY.",
     "expectedPeerIds": [
-      "QmPk4AtbFore74fJoP4CoS9Q96TvRvoQWR4VmkYtkBLmwz",
+      "QmPk4AtbFore74fJoP4CoS9Q96TvRvoQWR4VmkYtlBLmwz",
       "QmQBh7yAKG1kwxsEjdMAToDkWSkZiXhoXgxb1oytKi2nXu",
       "QmSGy7LgDCF796PH6ctS7LZ5U5TpWZjq6EU5S4NvaNk6cJ"
     ],
     "rtmr3Allowlist": ["+XO6nLsfqnTkX0VcNk9AaXAu79ErxURODtjuGOIF8Sk7OQYq3PVVsMG8jzDEeNJQ"],
-    "rtmr1Allowlist": ["kP0XBuMMdrW4nY+64RHAw1qnnyPNCPzJrfNheujTJeaL8FjUUABaflOZuJ81JtOI"],
     "manifestVersion": 1787800421,
     "manifestSignedAt": "2026-08-27T03:13:41Z"
   },
   "edge_function": {
     "name": "terminal3-attest",
     "verify_jwt": true,
+    "deployed": true,
+    "returns": "trust anchor metadata from signature-verified manifest",
     "engagement_isolation": "preserved — returns only cluster trust metadata, never workspace or engagement data",
-    "deployed": true
+    "sdk_authentication": "Not available in Deno edge runtime — SDK WASM component requires Node.js MessageChannel. Full authentication performed by Node.js adapter."
   },
-  "next_secret_required": "T3N_API_KEY — the private key of the ETH wallet registered with Terminal 3. Set as a Supabase edge function secret. Required for full authentication (handshake + DID). Credential-free trust check works without it.",
+  "node_adapter_authentication": {
+    "status": "PASS (throwaway key)",
+    "handshake": "SUCCEEDED",
+    "authenticate": "SUCCEEDED — DID returned",
+    "t3n_api_key": "configured as Supabase secret (T3N_API_KEY). Available to Node.js adapter via environment. Not printed, not logged, not exposed in client code.",
+    "note": "Throwaway test key authentication succeeded. Real T3N_API_KEY authentication not yet tested in this session — key must be available to the Node.js process environment."
+  },
+  "previous_approach_correction": {
+    "removed": "/status RTMR1 patch from client.mjs and terminal3-attest",
+    "reason": "manifestToTrustAnchor projects fields but does not verify signatures. A measurement learned from the same untrusted server cannot independently pin its identity. Adding rtmr1_allowlist changes the signed payload. The /status-derived RTMR1 value was not a verified trust anchor.",
+    "corrected_by": "Pinning SDK 5.2.0 per Terminal 3 developer recommendation. fetchTrustedManifest in 5.2.0 works with the testnet manifest unmodified — no rtmr1_allowlist required."
+  },
   "security_constraints_preserved": {
     "cleaned_v12_deployed": true,
     "email_confirmation_ON": true,
@@ -37,6 +50,19 @@
     "attestation_not_disabled": true,
     "unsafe_trust_server_not_used": true,
     "no_invented_rtmr_values": true,
-    "no_external_support_messages_sent": true
+    "no_external_support_messages_sent": true,
+    "t3n_api_key_not_printed": true,
+    "t3n_api_key_not_in_client_code": true,
+    "t3n_api_key_not_in_logs": true,
+    "engagement_isolation_preserved": true,
+    "terminal3_live_execution_disabled": true,
+    "agent_identity_grant_contract_receiver_unverified": true
+  },
+  "remaining_prerequisites": {
+    "runtime": "Node.js for SDK authentication (Deno edge runtime lacks MessageChannel required by SDK WASM component)",
+    "trust": "SDK 5.2.0 fetchTrustedManifest provides signature-verified manifest. No custom anchor construction or /status patching.",
+    "key": "T3N_API_KEY must be available to the Node.js process environment (not just Supabase edge secrets). Key is already configured as a Supabase secret.",
+    "agent_identity": "Agent identity, grant, contract, and receiver remain unverified. Terminal 3 live execution stays disabled until full scoped workflow is tested.",
+    "tenant_authentication": "Real T3N_API_KEY authentication must be tested in a Node.js environment with the key available. Throwaway key succeeded; real key not yet tested."
   }
 }
