@@ -1,4 +1,4 @@
-// Server-only, plain Node.js. Never import this package into the browser or Worker.
+// Server-only, plain Node. Never import this package into the browser or Worker.
 //
 // The testnet trust manifest endpoint does not include rtmr1_allowlist (the
 // real rootfs-integrity signal). The RTMR1 value is published at the /status
@@ -6,9 +6,6 @@
 // This adapter fetches both endpoints, patches the manifest with the RTMR1
 // value from /status, and builds a verified TrustAnchor via manifestToTrustAnchor.
 // It does NOT use unsafe_trust_server and does NOT invent RTMR values.
-//
-// The SDK's WASM component requires MessageChannel (Node.js only), so full
-// authentication happens here in Node.js, not in a Deno edge function.
 import {
   T3nClient,
   setEnvironment,
@@ -23,19 +20,15 @@ import {
 const RTMR1_SLOT_INDEX = 3;
 const RTMR1_SLOT_LEN = 64; // 48 bytes = 64 base64 chars
 
-const NODE_URLS = {
-  testnet: "https://cn-api.sg.testnet.t3n.terminal3.io",
-  sandbox: "https://cn-api.sg.testnet.t3n.terminal3.io",
-  production: "https://cn-api.sg.prod.t3n.terminal3.io",
-};
-
 /**
  * Fetch the trust manifest and /status, patch the manifest with the RTMR1
  * value from /status, and return a verified TrustAnchor.
  */
 export async function resolvePatchedTrustAnchor(env) {
   setEnvironment(env);
-  const nodeUrl = NODE_URLS[env] || NODE_URLS.testnet;
+  const nodeUrl = env === "production"
+    ? "https://cn-api.sg.prod.t3n.terminal3.io"
+    : "https://cn-api.sg.testnet.t3n.terminal3.io";
 
   const manifestUrl = `${nodeUrl}/api/trust-manifest`;
   const statusUrl = `${nodeUrl}/status`;
@@ -70,18 +63,14 @@ export async function resolvePatchedTrustAnchor(env) {
   return anchor;
 }
 
-/**
- * Accept a trust anchor from the deployed edge function (terminal3-attest)
- * and use it to construct an authenticated T3nClient.
- * The edge function returns the patched trust anchor; this Node adapter
- * uses it with the SDK for full authentication (handshake + DID).
- */
-export async function authenticateWithAnchor(key, trustAnchor, env = "testnet") {
+export async function authenticateTerminal3(key) {
   if (!key) throw new Error("T3N_API_KEY is required in the server environment.");
-  setEnvironment(env);
+  setEnvironment("testnet");
   const address = eth_get_address(key);
-  const wasmComponent = await loadWasmComponent();
-
+  const [wasmComponent, trustAnchor] = await Promise.all([
+    loadWasmComponent(),
+    resolvePatchedTrustAnchor("testnet"),
+  ]);
   const client = new T3nClient({
     wasmComponent,
     trustAnchor,
@@ -92,15 +81,6 @@ export async function authenticateWithAnchor(key, trustAnchor, env = "testnet") 
   if (typeof identity?.value !== "string" || !identity.value.startsWith("did:"))
     throw new Error("Provider did not return an identity.");
   return { client, did: identity.value };
-}
-
-/**
- * Full authentication: resolve trust anchor locally, then authenticate.
- * Use this when running in Node.js with T3N_API_KEY in the environment.
- */
-export async function authenticateTerminal3(key) {
-  const trustAnchor = await resolvePatchedTrustAnchor("testnet");
-  return authenticateWithAnchor(key, trustAnchor, "testnet");
 }
 
 /**
